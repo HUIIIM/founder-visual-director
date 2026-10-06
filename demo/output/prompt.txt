@@ -1,0 +1,15 @@
+# 终版生图 prompt（demo 级）
+
+## 正向 prompt
+photorealistic portrait of an Asian male founder in his 30s, 城市晨跑后拉伸,
+生活感 mood, 3:4 composition, cinematic natural light,
+shallow depth of field, editorial photography style
+
+## 固定否定词
+low quality, blurry, deformed hands, extra fingers, watermark, text artifacts, cartoonish
+
+## 禁用词 grep 结果
+无命中 -> 通过
+
+## 冲突审计结论
+场景"城市晨跑后拉伸"与主题"小红书第 10 篇封面"无 B 级严审情形（非名人合影/晚宴）-> 通过
