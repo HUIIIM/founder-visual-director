@@ -2,6 +2,8 @@
 
 # founder-visual-director · 创始人视觉指导
 
+[中文版](README.zh-CN.md)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](SKILL.md)
 
