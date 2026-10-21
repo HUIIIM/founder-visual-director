@@ -1,29 +1,17 @@
-# founder-visual-director
+![founder-visual-director](docs/assets/social-preview.png)
+
+# founder-visual-director · 创始人视觉指导
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](SKILL.md)
 
 **AI founder photos that look cheap destroy credibility. This skill is the director on set: it turns a scene brief into an executable image prompt, a photorealism QA checklist, and a rotation-compliance verdict — before anything ships.**
 
-[Quick start](#30-second-quick-start) · [What it delivers](#what-it-delivers) · [Demo](#demo) · [FAQ](#faq)
+[官网](https://vertciti.com) · [快速开始](#快速开始) · [诚实约定](#诚实约定) · [测试实证](#测试实证)
 
-A [Vertciti Skill Pack](https://vertciti.com) for director-level control over AI-generated founder photography. One scene brief in, three-part deliverable out — covering Xiaohongshu, Instagram, and LinkedIn founder covers and illustrations.
+> founder-visual-director 是 vertciti 为创始人自用的 AI 视觉生产指导工具。状态：Version 1.0.0；`evals/` smoke evaluations (in progress)。
 
-Built for [Miao](https://vertciti.com) (Jiahui Miao) — N=1 founder IP infrastructure.
-
-## The real problem it solves
-
-AI-generated founder imagery fails in three repeatable ways: uncanny faces and broken physics (hands, reflections, light direction), and visual repetition (same outfit, same styling, same background two posts in a row — the audience notices before you do). founder-visual-director mechanizes the guardrails: full-size photorealism checks where any red-line fail means full regenerate, and rotation compliance against an asset ledger with cooldown rules.
-
-## What it delivers
-
-Every run produces three parts:
-
-1. **Image prompt** — Executable positive prompt + fixed negative-token block + banned-word grep result + conflict audit (brief vs. standing rules).
-2. **QA checklist** — Face-angle rules → 10-point proportion check → photorealism pass (anatomy / physics / global consistency) → background physics. Any red-line fail = full regenerate, no patching.
-3. **Rotation compliance** — Checked against the asset ledger (last 3 posts, cooldown periods, white-background avatar ban, adjacent-post outfit/styling duplication rule). Verdict: **pass** / **conditional** / **violation** + remediation.
-
-## 30-second quick start
+## 快速开始
 
 ```bash
 cd demo
@@ -33,7 +21,25 @@ python3 run.py < input.json
 
 See `demo/README.md` for the minimal runnable slice (zero external dependencies).
 
-## Demo
+## 它做什么
+
+A [Vertciti Skill Pack](https://vertciti.com) for director-level control over AI-generated founder photography. One scene brief in, three-part deliverable out — covering Xiaohongshu, Instagram, and LinkedIn founder covers and illustrations.
+
+Built for [Miao](https://vertciti.com) (Jiahui Miao) — N=1 founder IP infrastructure.
+
+### The real problem it solves
+
+AI-generated founder imagery fails in three repeatable ways: uncanny faces and broken physics (hands, reflections, light direction), and visual repetition (same outfit, same styling, same background two posts in a row — the audience notices before you do). founder-visual-director mechanizes the guardrails: full-size photorealism checks where any red-line fail means full regenerate, and rotation compliance against an asset ledger with cooldown rules.
+
+### What it delivers
+
+Every run produces three parts:
+
+1. **Image prompt** — Executable positive prompt + fixed negative-token block + banned-word grep result + conflict audit (brief vs. standing rules).
+2. **QA checklist** — Face-angle rules → 10-point proportion check → photorealism pass (anatomy / physics / global consistency) → background physics. Any red-line fail = full regenerate, no patching.
+3. **Rotation compliance** — Checked against the asset ledger (last 3 posts, cooldown periods, white-background avatar ban, adjacent-post outfit/styling duplication rule). Verdict: **pass** / **conditional** / **violation** + remediation.
+
+### Demo
 
 A complete worked output set ships in `demo/output/`:
 
@@ -43,7 +49,7 @@ A complete worked output set ships in `demo/output/`:
 
 > Demo recording/screenshot of the three-part deliverable being used in a real release: 待补（占位）——output files above are already real; a visual walkthrough is planned.
 
-## When to use it
+### When to use it
 
 | Scenario | What it produces |
 |---|---|
@@ -52,7 +58,7 @@ A complete worked output set ships in `demo/output/`:
 | LinkedIn professional portrait | Credibility-first direction, no influencer look |
 | Launching a new visual series | Background/scene/contrast differentiation against the ledger |
 
-## Repo layout
+### Repo layout
 
 ```
 founder-visual-director/
@@ -62,7 +68,7 @@ founder-visual-director/
   evals/        # smoke evaluations (in progress)
 ``` A complete worked output set ships in `demo/output/`.
 
-## Input contract
+### Input contract
 
 The skill refuses to hallucinate a brief. The caller must supply (at minimum):
 
@@ -75,12 +81,24 @@ The skill refuses to hallucinate a brief. The caller must supply (at minimum):
 
 Missing fields are asked for, not invented. Requires the companion `founder-visual-studio` skill (shot planning) and visual spec v1.6/v1.7; rotation rules live in `references/`.
 
-## Safety red lines
+## 诚实约定
 
+- 每个数字标注来源与抓取时间；抓不到的标“需手动补”，绝不编数。
 - The white-background standard avatar is **never** used as content illustration.
 - Every image gets full-size visual inspection before release — thumbnails don't count.
 - Same outfit / same styling in adjacent posts = duplicate (rejected).
 - Generated backgrounds must differ visibly from recent ones — no lazy reskins.
+- 若使用 AI 生成或深度修图的人像，须在图注标明。
+- 本产品不做什么：见 FAQ——“Does it replace a human art director? No.”
+- 输出为辅助结论，不构成投资、法律或税务建议。
+
+## 测试实证
+
+| 指标 | 数字 | 来源 · 数据截至 |
+|---|---|---|
+| demo 评估（`bash demo/eval.sh`） | PASS: 三部分交付物齐全，契约字段完整 | 本地运行 `demo/eval.sh` · 2026-10-21 |
+| 快速开始复跑（`python3 run.py < input.json`） | 再生成输出与仓库已提交 `demo/output/` 三件逐字一致 | 本地运行 `demo/run.py` · 2026-10-21 |
+| 冒烟评估记录 | `evals/smoke-01.md`（完整 dry-run，原文保留） | `evals/smoke-01.md` · 2026-10-21 |
 
 ## Roadmap
 
@@ -106,7 +124,15 @@ No. It replaces the "forgot to check" part. Full-size human inspection is still 
 
 Issues and PRs welcome. Visual-quality claims need before/after evidence at full size, not adjectives.
 
-## License
+## Author
+
+**Jiahui Miao** — Founder, [vertciti](https://vertciti.com). Building N=1 personal AI infrastructure. Participates in 3GPP working on 6G core network standards.
+
+## 关于 vertciti
+
+vertciti 把全部资源用来运营一个人的人生：创始人苗家辉。官网 [vertciti.com](https://vertciti.com) · 仿冒预警：vertciti 从未发行任何代币。
+
+## 许可证
 
 | Module | License | Plain meaning |
 |---|---|---|
@@ -114,6 +140,4 @@ Issues and PRs welcome. Visual-quality claims need before/after evidence at full
 
 See [LICENSE](LICENSE).
 
-## Author
-
-**Jiahui Miao** — Founder, [vertciti](https://vertciti.com). Building N=1 personal AI infrastructure. Participates in 3GPP working on 6G core network standards.
+MIT · 运营主体 VERTCITY LLC
