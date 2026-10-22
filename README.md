@@ -3,11 +3,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](SKILL.md)
 
+> **状态 / Status:** active · early（v1.0.0，2026-10-06 首发）· 可运行 demo 只到 prompt 级（不渲染图片）；`evals/` 目前仅 1 份冒烟评估，仍在补充。
+> Active but early: v1.0.0; the runnable demo stops at prompt level (no image rendering); `evals/` holds one smoke evaluation so far.
+>
+> Part of [vertciti](https://vertciti.com) · 产品一页纸 / Product one-pager: [docs/PRODUCT.md](docs/PRODUCT.md) · 变更记录 / Changelog: [CHANGELOG.md](CHANGELOG.md)
+
 **AI founder photos that look cheap destroy credibility. This skill is the director on set: it turns a scene brief into an executable image prompt, a photorealism QA checklist, and a rotation-compliance verdict — before anything ships.**
 
 [Quick start](#30-second-quick-start) · [What it delivers](#what-it-delivers) · [Demo](#demo) · [FAQ](#faq)
 
-A [Vertciti Skill Pack](https://vertciti.com) for director-level control over AI-generated founder photography. One scene brief in, three-part deliverable out — covering Xiaohongshu, Instagram, and LinkedIn founder covers and illustrations.
+A [vertciti Skill Pack](https://vertciti.com) for director-level control over AI-generated founder photography. One scene brief in, three-part deliverable out — covering Xiaohongshu, Instagram, and LinkedIn founder covers and illustrations.
 
 Built for [Miao](https://vertciti.com) (Jiahui Miao) — N=1 founder IP infrastructure.
 
@@ -106,7 +111,17 @@ No. It replaces the "forgot to check" part. Full-size human inspection is still 
 
 Issues and PRs welcome. Visual-quality claims need before/after evidence at full size, not adjectives.
 
-## License
+## 安全 / Security
+
+本仓库暂无 SECURITY.md。如发现安全问题（例如误提交的密钥、可被滥用的 prompt 规则），请勿公开提 issue；请通过 GitHub 私密渠道（private vulnerability report，若已开启）或直接联系维护者 [@HUIIIM](https://github.com/HUIIIM) 报告。
+CI 中的 gitleaks 会在每次 push / PR 及每晚扫描全部历史中的密钥。
+
+No SECURITY.md yet. To report a security issue (e.g. a leaked secret), please do not open a public issue — use GitHub private vulnerability reporting if enabled, or contact the maintainer [@HUIIIM](https://github.com/HUIIIM) directly. gitleaks runs in CI on every push, PR and nightly over full history.
+
+## 许可证 / License
+
+MIT License（见 [LICENSE](LICENSE)，Copyright (c) 2026 Jiahui Miao）。
+
 
 | Module | License | Plain meaning |
 |---|---|---|
