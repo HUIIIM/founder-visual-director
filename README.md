@@ -1,134 +1,104 @@
 # founder-visual-director
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](SKILL.md)
+A vertciti skill that turns a scene brief for AI-generated founder photography into an executable image
+prompt, a full-size photorealism QA checklist and a rotation-compliance verdict, for founders publishing on
+Xiaohongshu, Instagram and LinkedIn.
 
-> **状态 / Status:** active · early（v1.0.0，2026-10-06 首发）· 可运行 demo 只到 prompt 级（不渲染图片）；`evals/` 目前仅 1 份冒烟评估，仍在补充。
-> Active but early: v1.0.0; the runnable demo stops at prompt level (no image rendering); `evals/` holds one smoke evaluation so far.
->
-> Part of [vertciti](https://vertciti.com) · 产品一页纸 / Product one-pager: [docs/PRODUCT.md](docs/PRODUCT.md) · 变更记录 / Changelog: [CHANGELOG.md](CHANGELOG.md)
+| | |
+|---|---|
+| Status | active · early — v1.0.0 (first release 2026-10-06); the runnable demo stops at prompt level (no image rendering); `evals/` holds one smoke evaluation |
+| Type | vertciti skill (agent skill defined in [SKILL.md](SKILL.md)) |
+| Install / use | Load `SKILL.md` as a skill in your agent; try the zero-dependency demo with `python3 demo/run.py` |
+| Licence | MIT ([LICENSE](LICENSE)), Copyright (c) 2026 Jiahui Miao |
+| Languages | README in English · skill text, references and demo output in 简体中文 |
+| Contact | Security: see [Security](#security) · Product: [vertciti.com](https://vertciti.com) |
 
-**AI founder photos that look cheap destroy credibility. This skill is the director on set: it turns a scene brief into an executable image prompt, a photorealism QA checklist, and a rotation-compliance verdict — before anything ships.**
+## Overview
 
-[Quick start](#30-second-quick-start) · [What it delivers](#what-it-delivers) · [Demo](#demo) · [FAQ](#faq)
+AI-generated founder imagery fails in repeatable ways: faces and anatomy that look wrong, physics that do
+not hold (hands, reflections, light direction), and visual repetition across consecutive posts (same
+outfit, styling or background). This skill makes the checks explicit. Given a scene brief, it produces three
+deliverables, and any red-line failure in the QA checklist means the image is regenerated rather than
+patched.
 
-A [vertciti Skill Pack](https://vertciti.com) for director-level control over AI-generated founder photography. One scene brief in, three-part deliverable out — covering Xiaohongshu, Instagram, and LinkedIn founder covers and illustrations.
+Product one-pager: [docs/PRODUCT.md](docs/PRODUCT.md) · Changelog: [CHANGELOG.md](CHANGELOG.md)
 
-Built for [Miao](https://vertciti.com) (Jiahui Miao) — N=1 founder IP infrastructure.
+## Capabilities
 
-## The real problem it solves
+| Deliverable | What it contains |
+|---|---|
+| Image prompt | Executable positive prompt, fixed negative-token block, banned-word grep result, conflict audit (brief vs. standing rules) |
+| QA checklist | Face-angle rules, 10-point proportion check, photorealism pass (anatomy / physics / global consistency), background physics |
+| Rotation compliance | Check against the asset ledger (last 3 posts, cooldown periods, white-background avatar ban, adjacent-post outfit/styling duplication). Verdict: pass / conditional / violation, with remediation |
 
-AI-generated founder imagery fails in three repeatable ways: uncanny faces and broken physics (hands, reflections, light direction), and visual repetition (same outfit, same styling, same background two posts in a row — the audience notices before you do). founder-visual-director mechanizes the guardrails: full-size photorealism checks where any red-line fail means full regenerate, and rotation compliance against an asset ledger with cooldown rules.
+Typical uses: a Xiaohongshu cover for the next post, an Instagram daily illustration that must not repeat an
+outfit, a LinkedIn professional portrait, or the first post of a new visual series.
 
-## What it delivers
-
-Every run produces three parts:
-
-1. **Image prompt** — Executable positive prompt + fixed negative-token block + banned-word grep result + conflict audit (brief vs. standing rules).
-2. **QA checklist** — Face-angle rules → 10-point proportion check → photorealism pass (anatomy / physics / global consistency) → background physics. Any red-line fail = full regenerate, no patching.
-3. **Rotation compliance** — Checked against the asset ledger (last 3 posts, cooldown periods, white-background avatar ban, adjacent-post outfit/styling duplication rule). Verdict: **pass** / **conditional** / **violation** + remediation.
-
-## 30-second quick start
+## Quick start
 
 ```bash
-cd demo
-python3 run.py < input.json
-# Output lands in demo/output/ (prompt.txt, checklist.md, rotation.md)
+git clone https://github.com/HUIIIM/founder-visual-director && cd founder-visual-director
+python3 demo/run.py    # reads demo/input.json, writes demo/output/{prompt.txt,checklist.md,rotation.md}
+bash demo/eval.sh      # prints PASS / FAIL for the three deliverables
 ```
 
-See `demo/README.md` for the minimal runnable slice (zero external dependencies).
-
-## Demo
-
-A complete worked output set ships in `demo/output/`:
-
-- `prompt.txt` — the executable image prompt from the sample brief
-- `checklist.md` — the full photorealism QA checklist as produced
-- `rotation.md` — the rotation-compliance verdict from the sample asset ledger
-
-> Demo recording/screenshot of the three-part deliverable being used in a real release: 待补（占位）——output files above are already real; a visual walkthrough is planned.
-
-## When to use it
-
-| Scenario | What it produces |
-|---|---|
-| Xiaohongshu cover for the next post | Executable prompt + QA checklist tuned for the platform |
-| IG daily illustration, outfit must differ | Rotation verdict blocks same-styling repeats |
-| LinkedIn professional portrait | Credibility-first direction, no influencer look |
-| Launching a new visual series | Background/scene/contrast differentiation against the ledger |
-
-## Repo layout
-
-```
-founder-visual-director/
-  SKILL.md      # the skill itself: director protocol, input contract, red lines
-  demo/         # 30-second slice: input.json → output/(prompt.txt, checklist.md, rotation.md)
-  references/   # visual spec v1.6/v1.7, asset rotation rules
-  evals/        # smoke evaluations (in progress)
-``` A complete worked output set ships in `demo/output/`.
+No external dependencies beyond Python 3. A worked output set is committed in
+[`demo/output/`](demo/output/). See [`demo/README.md`](demo/README.md) for the scope of the demo.
 
 ## Input contract
 
-The skill refuses to hallucinate a brief. The caller must supply (at minimum):
+The skill does not invent a brief. The caller supplies at minimum:
 
 | Field | Example |
 |---|---|
-| Theme / platform / content line | 小红书第 10 篇 / IG daily / LinkedIn industry take |
-| Scene need | Post-morning-run stretching, city balcony |
-| Mood | Calm confidence, cinematic |
+| Theme / platform / content line | Xiaohongshu post 10 / IG daily / LinkedIn industry take |
+| Scene | Post-run stretching on a city balcony |
+| Mood | Calm, cinematic |
 | Rotation context | Last 3 posts' outfits, scenes, backgrounds |
 
-Missing fields are asked for, not invented. Requires the companion `founder-visual-studio` skill (shot planning) and visual spec v1.6/v1.7; rotation rules live in `references/`.
+Missing fields are asked for, not filled in. Declared dependencies (from `SKILL.md`): the companion
+`founder-visual-studio` skill, visual spec v1.6/v1.7 and the asset rotation rules in
+[`references/`](references/).
 
-## Safety red lines
+## Repository layout
 
-- The white-background standard avatar is **never** used as content illustration.
-- Every image gets full-size visual inspection before release — thumbnails don't count.
-- Same outfit / same styling in adjacent posts = duplicate (rejected).
-- Generated backgrounds must differ visibly from recent ones — no lazy reskins.
+```
+SKILL.md      the skill: director protocol, input contract, red lines
+demo/         prompt-level slice: input.json -> output/ (prompt.txt, checklist.md, rotation.md)
+references/   visual spec, photorealism checklist, rotation rules, model notes
+evals/        smoke evaluation (one so far)
+docs/         product one-pager
+```
 
-## Roadmap
+## Safety rules
 
-- `evals/` smoke evaluations with side-by-side similarity judgments (in progress).
-- Rotation ledger automation: machine-diff new briefs against posted-asset log.
-- Platform expansion rules (TikTok now in standing release schedule) folded into rotation compliance.
+- The white-background standard avatar is never used as a content illustration.
+- Every image is inspected at full size before release; thumbnails do not count.
+- The same outfit or styling in adjacent posts counts as a duplicate and is rejected.
+- Generated backgrounds must differ visibly from recent ones.
 
-## FAQ
+## Status and limitations
 
-**Why not just describe the scene and let the model decide?**
-Models default to the average of their training data — same gray suit, same office window. The director's job is to force difference: background, light, framing, mood all specified, all checked against what already shipped.
+- The demo validates the chain from input contract to the three deliverables at prompt level only. Image
+  rendering runs in a separate media pipeline and requires human inspection.
+- The rotation check expects an asset ledger; when it is missing, the skill marks the ledger as pending
+  instead of assuming compliance.
+- `evals/` contains one smoke evaluation; further evaluations are planned, not done.
+- The skill does not replace a human art director. Full-size human inspection remains a release
+  requirement.
 
-**What does "red-line fail = full regenerate" mean in practice?**
-Hands wrong, reflection impossible, light direction inconsistent — any of these means start over. Patching a generated image with "just fix the hand" destroys global consistency; the QA checklist enforces this mechanically.
+## Security
 
-**How does rotation compliance know what's been posted?**
-Against the asset ledger: last 3 posts' outfits, scenes, backgrounds plus cooldown rules. Same outfit / same styling in adjacent posts = duplicate, rejected. The ledger is the memory the model doesn't have.
-
-**Does it replace a human art director?**
-No. It replaces the "forgot to check" part. Full-size human inspection is still a red line before release — the skill makes sure the inspection has something real to inspect.
+There is no `SECURITY.md` yet. To report a security issue (for example a committed secret), do not open a
+public issue; use GitHub private vulnerability reporting if it is enabled, or contact the maintainer
+[@HUIIIM](https://github.com/HUIIIM). CI runs gitleaks secret scanning and OpenSSF Scorecard.
 
 ## Contributing
 
-Issues and PRs welcome. Visual-quality claims need before/after evidence at full size, not adjectives.
+Issues and pull requests are welcome. Visual-quality claims need full-size before/after evidence.
 
-## 安全 / Security
+## Licence
 
-本仓库暂无 SECURITY.md。如发现安全问题（例如误提交的密钥、可被滥用的 prompt 规则），请勿公开提 issue；请通过 GitHub 私密渠道（private vulnerability report，若已开启）或直接联系维护者 [@HUIIIM](https://github.com/HUIIIM) 报告。
-CI 中的 gitleaks 会在每次 push / PR 及每晚扫描全部历史中的密钥。
+MIT — see [LICENSE](LICENSE). Copyright (c) 2026 Jiahui Miao.
 
-No SECURITY.md yet. To report a security issue (e.g. a leaked secret), please do not open a public issue — use GitHub private vulnerability reporting if enabled, or contact the maintainer [@HUIIIM](https://github.com/HUIIIM) directly. gitleaks runs in CI on every push, PR and nightly over full history.
-
-## 许可证 / License
-
-MIT License（见 [LICENSE](LICENSE)，Copyright (c) 2026 Jiahui Miao）。
-
-
-| Module | License | Plain meaning |
-|---|---|---|
-| All files | MIT | Commercial use OK, modify OK, attribution required |
-
-See [LICENSE](LICENSE).
-
-## Author
-
-**Jiahui Miao** — Founder, [vertciti](https://vertciti.com). Building N=1 personal AI infrastructure. Participates in 3GPP working on 6G core network standards.
+Built by vertciti — https://vertciti.com
