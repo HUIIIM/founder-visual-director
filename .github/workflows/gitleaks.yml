@@ -1,4 +1,4 @@
-# Secret scanning on every push, PR and nightly (full history). vertciti standard SEC-1.
+# Secret scanning on every push, PR and nightly (full history).
 name: Secret scan (gitleaks)
 on:
   push:

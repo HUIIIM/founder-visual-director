@@ -19,4 +19,4 @@ bash demo/eval.sh  # 输出 PASS/FAIL
 ## 诚实边界
 本 demo 只到 **prompt 级**：验证输入契约→三部分交付物的链路可运行。
 真实图片渲染走 media 生图管线（需真人目检，不在 30 秒 demo 范围内）。
-轮换检查对照 `deliverables/ops/used-visual-ledger.md`；台账缺失时按 skill 降级规则标注"台账待补"。
+轮换检查对照本地素材台账 `used-visual-ledger.md`（不在本仓库内）；台账缺失时按 skill 降级规则标注"台账待补"。
