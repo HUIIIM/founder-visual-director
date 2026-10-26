@@ -1,4 +1,4 @@
-# references 五段式重写 exemplar（D-011，1/6）
+# references 五段式重写示例
 五段式：背景/适用边界/操作步骤/反例/自检清单。
 
 ## 以 photorealism-checklist 为例
@@ -13,6 +13,5 @@ AI 生图"像照片"不等于真实照片；本清单用于发布前拦截一眼
 ### 五、自检清单
 - [ ] 全尺寸目检完成 - [ ] 三崩点通过 - [ ] 光影一致 - [ ] 结论：通过/打回（注明条目）
 
-## 剩余 5 个 references 重写计划（ETA 2026-10-22）
-background-physics.md / face-angle-rules.md / proportion-qc.md / rotation-rules.md / prompt-standards.md
-按同一五段式逐个重写，原文件保留 v1 归档。
+## 其余 references 文档
+background-physics.md / face-angle-rules.md / proportion-qc.md / rotation-rules.md / prompt-standards.md 拟按同一五段式逐个重写。

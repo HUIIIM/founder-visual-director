@@ -1,6 +1,6 @@
 # 生图 prompt 标准：越做越真的七规范
 
-> 来源提炼：《创始人人设视觉规范》第三十四条（生成标准）+ 第三十七条（人体比例硬标准 prompt 短语）+ 禁用词表 v1.0。
+> 来源提炼：本项目创始人视觉规范（生成标准与人体比例硬标准相关条款）+ 禁用词表 v1.0。
 > 工艺铁律：人物、背景、光影、透视一次成像；**严禁"脸部抠图贴背景"**。
 
 ## 七规范
@@ -32,7 +32,7 @@ oversized head, elongated neck, narrow shoulders, floating head, wide-angle dist
 
 ## 禁用词表 v1.0（prompt 审查红线）
 
-写完 prompt 必须全词 grep，零残留才算过。新增禁用词走质检组提案 + 终审。
+写完 prompt 必须全词 grep，零残留才算过。新增禁用词须经评审提案与终审确认。
 
 ```
 cinematic / cinematic lighting / 提亮暗部 / lift shadows / brighten /

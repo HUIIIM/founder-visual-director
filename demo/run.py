@@ -20,7 +20,7 @@ if missing:
 # 输出一：生图 prompt（含固定否定词＋禁用词 grep＋冲突审计）
 neg = "low quality, blurry, deformed hands, extra fingers, watermark, text artifacts, cartoonish"
 banned_hits = []
-for w in ["绝密", "2027-02"]:
+for w in ["绝密", "demo-secret"]:
     if w in inp.get("scene", ""):
         banned_hits.append(w)
 prompt = f"""# 终版生图 prompt（demo 级）
@@ -67,7 +67,7 @@ checklist = """# QA 检查表（demo 骨架）
 open(os.path.join(OUT, "checklist.md"), "w", encoding="utf-8").write(checklist)
 
 # 输出三：轮换合规检查
-ledger = os.path.expanduser("~/workspace/vertcity/deliverables/ops/used-visual-ledger.md")
+ledger = os.environ.get("FVD_LEDGER_PATH") or os.path.join(SKILL, "used-visual-ledger.md")
 if os.path.exists(ledger):
     verdict = "条件通过（台账存在，demo 未做全量三篇比对，人工复核）"
 else:

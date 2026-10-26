@@ -13,7 +13,7 @@
 
 ## 前置证据（Step 1 轮换预检所用）
 
-**台账**：`~/workspace/vertcity/deliverables/ops/used-visual-ledger.md`
+**台账**：本地素材台账 `used-visual-ledger.md`（不在本仓库内）
 - 状态：滞后。仍记第 8 篇当前版为 v3（"曼哈顿图书馆"），实际已出到 v9（书房夜景实物已目检）；
   第 9 篇 v1/v2/v3 均未登记；第 1–6 篇待补录（台账自注 2026-10-03 前回填）。
 - 按 skill 降级规则：以实物为准检查，结论标注"台账待补"。
@@ -133,7 +133,7 @@ oversized head, elongated neck, narrow shoulders, floating head, wide-angle dist
 
 **结论：违规。**
 
-- 证据：第 9 篇 v3（`your_files/founder-visual-batch-2026-10-03/xhs-post9-cover-v3.jpg`，
+- 证据：第 9 篇 v3（`xhs-post9-cover-v3.jpg`，
   2026-10-03 制作）已占用"户外运动 / 城市晨跑后拉伸"场景大类；第 10 篇与第 9 篇相邻，
   同场景大类重复违反"相邻 3 篇不重复"；且同场景 14 天内重复违反冷却规则。
 - 处置建议：更换场景大类。A 级替代候选（避开近三篇已占用的室内生活摆拍 / 室内书房 / 户外运动）：
@@ -148,7 +148,7 @@ oversized head, elongated neck, narrow shoulders, floating head, wide-angle dist
 | 时间 (EDT 2026-10-03) | 动作 | 结果 |
 |---|---|---|
 | 00:42 | 定位内容源 4 份（视觉规范 v1.6 / 真实感标准 v1.2–v1.3 / 资产策划案 / 大师计划 v1.1 + 脸角度亲研笔记） | 4 份齐 |
-| 00:43 | 查近三篇实况：your_files 实物 + used-visual-ledger.md + memory 交叉 | 发现台账滞后（第 8 篇 v9、第 9 篇未登记） |
+| 00:43 | 查近三篇实况：本地实物文件 + used-visual-ledger.md + 既有记录交叉 | 发现台账滞后（第 8 篇 v9、第 9 篇未登记） |
 | 00:43 | 目检第 7 篇封面（post7-01-cover.jpg）、第 9 篇 v3（xhs-post9-cover-v3.jpg）、第 8 篇 v9（post8-cover-v9.jpg） | 三篇场景大类确认 |
 | 00:44 | 按 skill Step 2 写脸角度预设（摆拍，视线落点 = 镜头） | 完成 |
 | 00:44 | 按 skill Step 3 写正向 prompt + 固定否定词带 | 完成 |
@@ -160,7 +160,7 @@ oversized head, elongated neck, narrow shoulders, floating head, wide-angle dist
 | 00:45 | 形成处置建议（3 个 A 级替代场景 + 排期提醒 + prompt 标注待确认） | 完成 |
 
 **环境插曲**：首次 grep 时 `/tmp` 512M tmpfs 写满导致 heredoc 截断、检查误报 MISS；
-改用 home 分区（`evals/work/`）重做后全部通过。此为已知环境特性（AGENTS.md 已有记录），
+改用 home 分区（`evals/work/`）重做后全部通过。此为已知环境特性，
 非 skill 缺陷。
 
 ## 判定
@@ -176,5 +176,5 @@ oversized head, elongated neck, narrow shoulders, floating head, wide-angle dist
   2. used-visual-ledger.md 滞后（第 8 篇 v9、第 9 篇 v1–v3 未登记）——记台账补录待办，
      skill 内已含"台账滞后降级规则"。
   3. QA 走查在第 9 篇 v3 上发现 1 个实质疑问（脸部正面光 vs 背景逆光是否为同一光源）——
-     按"存疑即打回"纪律打回 100% 放大复核；该疑问与 v2 事故同属"光的诚实"范畴，
+     按"存疑即打回"纪律打回 100% 放大复核；该疑问与既往同类事故同属"光的诚实"范畴，
      建议纳入下次质检必查。

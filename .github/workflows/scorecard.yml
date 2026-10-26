@@ -1,4 +1,4 @@
-# OpenSSF Scorecard: supply-chain posture, published to scorecard.dev. vertciti standard SEC-5.
+# OpenSSF Scorecard: supply-chain posture, published to scorecard.dev.
 # SARIF upload needs code scanning, so the job is skipped on private repos.
 name: Scorecard
 on:
