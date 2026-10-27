@@ -39,6 +39,31 @@
 - **视觉调度单制度**：任何图文/视频交付必须附调度单——资产 ID、上次使用时间（查台账）、本次选用理由、冷却期检查（通过/冲突）。无调度单的交付一律打回。
 - 台账滞后时的降级规则：以实物（已生成的版本文件）为准做检查，并在结论中明确标注"台账待补、按实物判定"，同时记一条台账补录待办。
 
+## 台账条目字段（schema 草案 v0.1，2026-10-27）
+
+> 草案状态：字段先行落字，供交付格式与登记工具引用；台账的机器实现（相邻 3 篇 / 14 天 / 冷却期真读判定）沿用本草案字段另行落地，字段名不得另起一套。
+> AI 标识组为 2026-10-27 新增，对齐：《人工智能生成合成内容标识办法》（2025-09-01 施行）、小红书 AI 生成内容标识规则、EU AI Act Art. 50（deepfake 类内容披露）、LinkedIn C2PA 来源凭证。
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `ledger_id` | string | 条目唯一 ID（如 `xhs-2026-010`） |
+| `platform` | string | 平台（小红书 / IG / LinkedIn 等） |
+| `post_no` | string | 篇号 / 发布序号 |
+| `date_made` | date | 制作日期（冷却计算取制作/发布孰早） |
+| `date_published` | date | 发布日期 |
+| `scene_category` | string | 场景大类（按上文大类表） |
+| `outfit` | string | 服装 |
+| `styling` | string | 造型 |
+| `asset_grade` | enum | 资产等级：S / A / B |
+| `asset_id` | string | 素材资产 ID |
+| `model_id` | string | 模特资产版本（如 `miao-v1`），无则填 `none` |
+| `reference_roles` | string | 参考图 + 角色（anchor/style/layout/negative） |
+| `status` | enum | 已发布（永久退役）/ 待发 / 已退役 |
+| `ai_generated` | bool | **AI 标识组**：本条目是否为 AI 生成合成内容 |
+| `ai_disclosure_text` | string | **AI 标识组**：声明文本（如「本图由 AI 生成」） |
+| `ai_disclosure_method` | enum | **AI 标识组**：标识方式：`platform_declaration`（平台声明）/ `c2pa`（来源凭证）/ `caption`（文案标注）/ `none` |
+| `ai_disclosure_basis` | string | **AI 标识组**：口径指针（所依据的规则/法规名，如《人工智能生成合成内容标识办法》、小红书 AI 生成内容标识规则、EU AI Act Art. 50） |
+
 ## 平台节奏（小红书）
 
 一天一篇，不连发。当天已发过，当天不再排新篇。

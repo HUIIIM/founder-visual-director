@@ -39,6 +39,29 @@ cinematic / cinematic lighting / 提亮暗部 / lift shadows / brighten /
 HDR / 过饱和 / oversaturated / 电影感灯光 / 完美皮肤 / perfect skin / flawless skin
 ```
 
+## 机读规则附表（工具直读，v0.1）
+
+> 本节是上文与 SKILL.md 规则的机读化转写，供 demo / 工具在运行时直读判定。
+> 口径以上文与 SKILL.md 为准；本节只做格式转写，不新增规则。新增/修改条目须与源规则同步评审。
+> 来源：面部禁词与年龄模式 ← SKILL.md「prompt 模板铁律」1（禁写面部特征词：眼/鼻/笑/年龄感等）；
+> 互斥对 ← SKILL.md Step 3-6 与上文七规范 6；B 级触发 ← SKILL.md Step 2-1（真实可识别人物转 B 级严审）。
+
+```text
+[face_words]
+eye, eyes, eyebrow, eyebrows, nose, nostril, lips, smile, smiling, grin,
+眼睛, 眼睑, 鼻子, 鼻梁, 嘴唇, 笑容, 微笑, 年龄感
+[age_patterns]
+\b\d{2}s\b
+\b\d+\s*years?\s*old\b
+\b\d+\s*岁
+middle-aged
+[conflict_pairs]
+夜景|夜晚|夜间|night <> 正午烈日|正午|烈日|midday|noon
+自拍|selfie|手机自拍 <> 85mm
+[b_level_triggers]
+名人, 合影, 晚宴, 政治名媛, celebrity, red carpet
+```
+
 ## 一体化构图要求
 
 巨型标题与照片是同一张设计——标题压图、眉题 / 证据条 / 页脚同一视觉语言；
