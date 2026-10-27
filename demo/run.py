@@ -4,14 +4,20 @@
 规则来源（运行时直读，本脚本不内置任何规则副本）：
 - references/prompt-standards.md：强制短语、固定否定词带、禁用词表 v1.0、机读规则附表
   （面部禁词 / 年龄模式 / 互斥对 / B 级触发词）。
+- 轮换预检：scripts/check_rotation.py 真读台账判定（相邻 3 篇 / 14 天 / 冷却期等），
+  规则数值直读 references/rotation-rules.md，台账格式见 references/ledger-format.md。
 任一规则集读取为空 -> 退出码 4（规则读取失败），绝不静默放行。
 
 用法：python3 demo/run.py [input.json]（默认 demo/input.json）
+输入除契约四项外可带结构化候选字段（platform / post_no / date / scene_category /
+outfit / styling / asset_id / asset_grade / uses_standard_portrait），供轮换预检真读判定；
+date 缺省取当天。
 输出目录：demo/output/，可用环境变量 FVD_DEMO_OUT 覆盖；
 台账路径：环境变量 FVD_LEDGER_PATH 或 skill 根目录 used-visual-ledger.md。
 退出码：0 通过 / 2 输入缺项 / 3 规则打回 / 4 规则读取失败。
 """
 import json, os, re, sys
+from datetime import date as _date
 
 DEMO = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(DEMO)
@@ -81,6 +87,13 @@ def main():
         print("规则读取失败：references/prompt-standards.md 规则集不完整，拒绝放行")
         return 4
 
+    sys.path.insert(0, os.path.join(SKILL, "scripts"))
+    try:
+        import check_rotation
+    except ImportError:
+        print("校验组件读取失败：scripts/check_rotation.py 不可导入，拒绝放行")
+        return 4
+
     input_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(DEMO, "input.json")
     inp = json.load(open(input_path, encoding="utf-8"))
 
@@ -133,7 +146,7 @@ def main():
     rejected = bool(reasons)
     verdict = "打回（" + "；".join(reasons) + "）" if rejected else "通过"
 
-    # AI 标识与声明（SKILL.md Step 5 第七节；字段与台账 schema 草案 v0.1 同名）
+    # AI 标识与声明（SKILL.md Step 5 第七节；字段与台账正式格式 v1.0 同名，references/ledger-format.md）
     method = "c2pa + platform_declaration" if "LinkedIn" in theme else "platform_declaration"
     disclosure = f"""## AI 标识与声明
 - ai_generated: true（本交付物为 AI 生成合成内容的生图 prompt）
@@ -192,27 +205,29 @@ def main():
 """
     open(os.path.join(OUT, "checklist.md"), "w", encoding="utf-8").write(checklist)
 
-    # 输出三：轮换合规检查（台账真读判定为后续批次范围，本轮仅存在性检查 + 降级标注）
+    # 输出三：轮换合规检查（真读台账判定：scripts/check_rotation.py；
+    # 台账缺失/不可解析时按降级规则输出「无法判定」，绝不假装通过）
     ledger = os.environ.get("FVD_LEDGER_PATH") or os.path.join(SKILL, "used-visual-ledger.md")
-    if os.path.exists(ledger):
-        rot_verdict = "条件通过（台账存在，demo 未做全量三篇比对，人工复核）"
-    else:
-        rot_verdict = "条件通过（台账待补：used-visual-ledger.md 未找到，按 skill 降级规则标注不确定性）"
-    entry = f"""## 拟登记台账条目（字段见 references/rotation-rules.md schema 草案 v0.1）
-- platform / post_no：{theme}
-- scene_category：户外运动
+    candidate = {
+        "platform": inp.get("platform") or theme,
+        "date": inp.get("date") or _date.today().isoformat(),
+        "scene_category": inp.get("scene_category"),
+        "outfit": inp.get("outfit"),
+        "styling": inp.get("styling"),
+        "asset_id": inp.get("asset_id"),
+        "asset_grade": inp.get("asset_grade"),
+        "uses_standard_portrait": bool(inp.get("uses_standard_portrait", False)),
+    }
+    _rot_code, rot_report = check_rotation.run(ledger, candidate)
+    entry = f"""## 拟登记台账条目（字段见 references/ledger-format.md 正式格式 v1.0）
+- platform / post_no：{candidate['platform']} / {inp.get('post_no') or theme}
+- scene_category：{candidate['scene_category']}
+- asset_id / asset_grade：{candidate['asset_id']} / {candidate['asset_grade']}
 - ai_generated：true
 - ai_disclosure_text：本图由 AI 生成
 - ai_disclosure_method：{method}
 - ai_disclosure_basis：《人工智能生成合成内容标识办法》；小红书 AI 生成内容标识规则；EU AI Act Art. 50""" if not rejected else "## 台账登记\n- 本单已打回，不登记台账。"
-    rotation = f"""# 轮换合规检查（demo 级）
-
-- 场景大类：户外运动（{scene}）
-- 白底禁令：未使用白底标准照 -> 通过
-- 结论：{rot_verdict}
-
-{entry}
-"""
+    rotation = rot_report + "\n" + entry + "\n"
     open(os.path.join(OUT, "rotation.md"), "w", encoding="utf-8").write(rotation)
     print("demo 输出已生成：", OUT)
     print("终判：" + verdict)

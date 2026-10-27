@@ -1,0 +1,5 @@
+# 待检 prompt 片段（品牌锁违规夹具）
+主视觉：accent color #FF6B35, gradient to #123456
+font-family: 'Arial', sans-serif
+标题字体：Noto Sans SC
+字标：Vertciti

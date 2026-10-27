@@ -1,0 +1,4 @@
+# 待检 prompt 片段（品牌锁合规夹具）
+主视觉：accent #0E7C74 on background #161C22, text #F5F5F2
+font-family: Inter, 'HarmonyOS Sans SC', sans-serif
+字标：vertciti

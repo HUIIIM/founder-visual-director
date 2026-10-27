@@ -53,6 +53,10 @@ safety: "白底标准头像永不做内容配图；每张图全尺寸目检；�
 3. 若违规：**先出处置建议**（换场景大类 / 推迟到冷却期后），再继续后面的步骤；
 产出的 prompt 必须标注"待场景确认"，不许当成可直接投产的版本交付。
 
+可执行实现：`scripts/check_rotation.py` 真读台账做上述判定（台账格式见
+`references/ledger-format.md` v1.0）；台账缺失/不可解析时只出「无法判定（降级）」，
+不得以存在性检查冒充预检通过。
+
 ### Step 2 场景与造型方案（含脸角度预设）
 
 1. 场景走 A 级常规（生活方式/工作纪实）；凡涉及**真实可识别人物**（名人合影、晚宴、政治名媛）一律转 B 级严审流程，不在本 skill 内放行。
@@ -117,7 +121,7 @@ safety: "白底标准头像永不做内容配图；每张图全尺寸目检；�
 
 AI 标识与声明为交付必填节：如实标注本交付物是否为 AI 生成合成内容、发布时使用的声明文本、
 标识方式（平台声明 / C2PA 来源凭证 / 文案标注）与口径指针；字段定义与台账同名，
-见 `references/rotation-rules.md`「台账条目字段（schema 草案 v0.1）」。
+见 `references/ledger-format.md`（台账正式格式 v1.0，字段沿用 schema 草案 v0.1）。
 
 ## 红线
 
@@ -159,9 +163,13 @@ founder-visual-director 交付物升级：每次交付 = 1 张拼版总览（con
 ### Reference Roles
 参考图必须声明角色：anchor（白底标准照身份锚）/ style（风格参考）/ layout（版式参考）/ negative（避雷参考）。
 一张图不许兼两角。
+可执行校验：`scripts/check_face_consistency.py` 对台账登记做机读核验——anchor 恰好 1 张、
+参考图文件存在且 SHA-256 与登记一致，不全/不符即违规。
 ### Brand Lock
 品牌锁：色板/字体/字标三项从 vertciti-brand-bundle.json 读取，prompt 内不得手写色值；
 偏离品牌锁的生成结果直接废弃。
+可执行校验：`scripts/check_brand_lock.py` 直读 bundle 校验 prompt/交付物中的手写色值、
+偏离字体与字标写法，命中即报错列出。
 
 ## prompt 模板铁律
 1. 禁写面部描述：prompt 内不许出现任何面部特征词（眼/鼻/笑/年龄感等），身份一致性只靠 anchor 参考图（Reference Roles）。
