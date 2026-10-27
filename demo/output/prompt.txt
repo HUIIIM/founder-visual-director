@@ -1,15 +1,32 @@
 # 终版生图 prompt（demo 级）
 
 ## 正向 prompt
-photorealistic portrait of an Asian male founder in his 30s, 城市晨跑后拉伸,
-生活感 mood, 3:4 composition, cinematic natural light,
-shallow depth of field, editorial photography style
+photorealistic documentary photograph, 城市晨跑后拉伸,
+生活感 mood, 3:4 composition, single natural key light,
+candid moment in motion, visible skin texture, unretouched,
+7.5 heads tall, natural adult proportions, no fashion-model elongation
+shot on 85mm f/1.8 lens, subject 3 meters from camera, eye-level angle
+seamless neck-to-shoulder transition
 
-## 固定否定词
-low quality, blurry, deformed hands, extra fingers, watermark, text artifacts, cartoonish
+## 固定否定词带
+plastic skin, cgi, perfect skin, symmetrical face, beauty filter, oversized head, elongated neck, narrow shoulders, floating head, wide-angle distortion
 
 ## 禁用词 grep 结果
 无命中 -> 通过
 
+## 面部描述检查结果
+无命中 -> 通过
+
 ## 冲突审计结论
-场景"城市晨跑后拉伸"与主题"小红书第 10 篇封面"无 B 级严审情形（非名人合影/晚宴）-> 通过
+无互斥指令 -> 通过
+
+## B 级严审检查
+无 B 级严审情形 -> 通过
+
+## AI 标识与声明
+- ai_generated: true（本交付物为 AI 生成合成内容的生图 prompt）
+- ai_disclosure_text: 本图由 AI 生成
+- ai_disclosure_method: platform_declaration
+- ai_disclosure_basis: 《人工智能生成合成内容标识办法》；小红书 AI 生成内容标识规则；EU AI Act Art. 50
+
+## 终判：通过

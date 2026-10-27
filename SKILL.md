@@ -112,7 +112,12 @@ safety: "白底标准头像永不做内容配图；每张图全尺寸目检；�
 四、生图 prompt（正向 / 否定词带 / 禁用词 grep 结果 / 冲突审计结论）
 五、QA 检查表（逐项 pass/fail/需全尺寸复核）
 六、发布前动作（台账回写责任 + 24h 登记）
+七、AI 标识与声明（ai_generated / ai_disclosure_text / ai_disclosure_method / ai_disclosure_basis）
 ```
+
+AI 标识与声明为交付必填节：如实标注本交付物是否为 AI 生成合成内容、发布时使用的声明文本、
+标识方式（平台声明 / C2PA 来源凭证 / 文案标注）与口径指针；字段定义与台账同名，
+见 `references/rotation-rules.md`「台账条目字段（schema 草案 v0.1）」。
 
 ## 红线
 
