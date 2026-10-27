@@ -1,0 +1,1 @@
+FVD FIXTURE BYTES - style reference stand-in for hash verification tests. Not an image.

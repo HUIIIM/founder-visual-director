@@ -65,6 +65,44 @@ EOF
   rm -rf "$FIX"
 fi
 
+# P1 回归夹具：台账真读判定 + 品牌锁/面部一致性校验（scripts/，issue #6 P1）
+# 全部在临时目录跑，不污染 demo/output。任一断言失败 -> FAIL。
+FIXP="$DEMO/fixtures"
+SCRIPTS="$(dirname "$DEMO")/scripts"
+FX="$(mktemp -d)"
+# 轮换违规例：run.py 接违规台账 -> rotation.md 必须逐项命中且结论为违规
+cat > "$FX/cand-violation.json" <<'EOF'
+{"aspect":"3:4","mood":"生活感","scene":"城市晨跑后拉伸","theme_platform":"小红书第 11 篇封面","platform":"小红书","post_no":"第 11 篇","date":"2026-10-26","scene_category":"户外运动","outfit":"黑色速干T恤+短裤","styling":"素颜短发","asset_id":"asset-s-001","asset_grade":"S"}
+EOF
+FVD_DEMO_OUT="$FX/out-v" FVD_LEDGER_PATH="$FIXP/ledger-violation.md" python3 "$DEMO/run.py" "$FX/cand-violation.json" > "$FX/v.log" 2>&1
+grep -q "结论：违规" "$FX/out-v/rotation.md" || note "P1 轮换违规例：rotation.md 结论非违规"
+for s in "相邻 3 篇内服装重复" "相邻 3 篇内造型重复" "14 天同大类" "冷却期未满"; do
+  grep -q "$s" "$FX/out-v/rotation.md" || note "P1 轮换违规例：缺违规明细：$s"
+done
+# 轮换合规例：接合规台账 -> rotation.md 结论必须为通过
+cat > "$FX/cand-compliant.json" <<'EOF'
+{"aspect":"3:4","mood":"生活感","scene":"城市晨跑后拉伸","theme_platform":"小红书第 11 篇封面","platform":"小红书","post_no":"第 11 篇","date":"2026-10-26","scene_category":"户外运动","outfit":"黑色速干T恤+短裤","styling":"运动短发","asset_id":"xhs-asset-new-run","asset_grade":"A"}
+EOF
+FVD_DEMO_OUT="$FX/out-c" FVD_LEDGER_PATH="$FIXP/ledger-compliant.md" python3 "$DEMO/run.py" "$FX/cand-compliant.json" > "$FX/c.log" 2>&1
+grep -q "结论：通过" "$FX/out-c/rotation.md" || note "P1 轮换合规例：rotation.md 结论非通过"
+# 台账缺失必须降级为无法判定，绝不冒充通过
+FVD_DEMO_OUT="$FX/out-m" FVD_LEDGER_PATH="$FX/no-ledger.md" python3 "$DEMO/run.py" "$FX/cand-compliant.json" > "$FX/m.log" 2>&1
+grep -q "结论：无法判定" "$FX/out-m/rotation.md" || note "P1 台账缺失例：未降级为无法判定"
+# 品牌锁：违规夹具必须被拒、合规夹具必须通过
+python3 "$SCRIPTS/check_brand_lock.py" "$FIXP/brandlock-bad.txt" > "$FX/bl-bad.log" 2>&1
+[ $? -eq 1 ] || note "P1 品牌锁违规例：未以退出码 1 拒绝"
+grep -q "#FF6B35" "$FX/bl-bad.log" || note "P1 品牌锁违规例：未列出手写色值"
+python3 "$SCRIPTS/check_brand_lock.py" "$FIXP/brandlock-good.txt" > "$FX/bl-good.log" 2>&1
+[ $? -eq 0 ] || note "P1 品牌锁合规例：未通过"
+# 面部一致性：anchor 缺失/哈希不符必须被拒、合规台账必须通过
+python3 "$SCRIPTS/check_face_consistency.py" "$FIXP/ledger-face-violation.md" > "$FX/fc-bad.log" 2>&1
+[ $? -eq 1 ] || note "P1 面部违规例：未以退出码 1 拒绝"
+grep -q "anchor 参考图应恰好 1 张" "$FX/fc-bad.log" || note "P1 面部违规例：未报 anchor 缺失"
+grep -q "哈希不符" "$FX/fc-bad.log" || note "P1 面部违规例：未报哈希不符"
+python3 "$SCRIPTS/check_face_consistency.py" "$FIXP/ledger-compliant.md" > "$FX/fc-good.log" 2>&1
+[ $? -eq 0 ] || note "P1 面部合规例：未通过"
+rm -rf "$FX"
+
 [ -n "$TMPD" ] && rm -rf "$TMPD"
 if [ "$ok" = 1 ]; then echo "PASS: 三部分交付物齐全，规则直读校验与回归夹具全过"; exit 0
 else echo "FAIL: 见上方逐项"; exit 1; fi
