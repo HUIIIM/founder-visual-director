@@ -1,0 +1,25 @@
+# Demo eval on every PR: sample reproducible, rule fixtures rejected, bad input refused. vertciti standard QA-1.
+name: Demo eval
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  eval:
+    name: demo eval
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+      - run: python3 -m py_compile demo/run.py scripts/*.py
+      - run: bash demo/eval.sh
+      - name: committed sample unchanged after eval
+        run: git diff --exit-code demo/output

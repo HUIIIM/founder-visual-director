@@ -22,6 +22,8 @@ from datetime import date as _date
 DEMO = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(DEMO)
 STANDARDS = os.path.join(SKILL, "references", "prompt-standards.md")
+WHITE_PORTRAIT_WORDS = ["标准照", "标准头像", "standard portrait", "standard avatar"]
+WHITE_STUDIO_WORDS = ["白底", "棚拍", "white background"]
 OUT = os.environ.get("FVD_DEMO_OUT") or os.path.join(DEMO, "output")
 os.makedirs(OUT, exist_ok=True)
 
@@ -81,6 +83,25 @@ def hits_in(text, tokens):
     return out
 
 
+def clean(value):
+    """单行化并去掉 markdown 标题符，防止输入伪造交付物里的段落（如「## 终判：通过」）。"""
+    return re.sub(r"\s+", " ", value).replace("#", "").strip()
+
+
+def load_input(path):
+    """读取并校验输入：必须是 JSON 对象，字符串字段一律单行化。不合契约返回 None。"""
+    try:
+        with open(path, encoding="utf-8") as f:
+            inp = json.load(f)
+    except (OSError, ValueError) as e:
+        print("输入无法读取（%s），按契约应先问调用者：%s" % (path, e))
+        return None
+    if not isinstance(inp, dict):
+        print("输入必须是 JSON 对象，按契约应先问调用者")
+        return None
+    return {k: clean(v) if isinstance(v, str) else v for k, v in inp.items()}
+
+
 def main():
     phrases, negative, banned, face_words, age_patterns, pairs, b_triggers = load_rules()
     if not (phrases and negative and banned and face_words and age_patterns and pairs and b_triggers):
@@ -95,11 +116,13 @@ def main():
         return 4
 
     input_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(DEMO, "input.json")
-    inp = json.load(open(input_path, encoding="utf-8"))
+    inp = load_input(input_path)
+    if inp is None:
+        return 2
 
     # 输入契约校验：SKILL.md 要求缺项先问，不许脑补
     required = ["theme_platform", "scene", "aspect", "mood"]
-    missing = [k for k in required if not inp.get(k)]
+    missing = [k for k in required if not isinstance(inp.get(k), str) or not inp[k]]
     if missing:
         print("输入缺项，按契约应先问调用者：", missing)
         return 2
@@ -133,6 +156,10 @@ def main():
             conflicts.append(f"{lh[0]} x {rh[0]}")
     # 检查四：B 级严审（真实可识别人物场景不在本 skill 内放行，SKILL.md Step 2-1）
     b_hits = hits_in(scene + " " + theme, b_triggers)
+    # 检查五：白底标准照永不作内容配图（白底三禁 1，事故级；不依赖台账）
+    white_hits = [w for w in WHITE_PORTRAIT_WORDS if w in scene.lower()]
+    if inp.get("uses_standard_portrait") is True:
+        white_hits.append("uses_standard_portrait")
 
     reasons = []
     if banned_hits:
@@ -143,6 +170,8 @@ def main():
         reasons.append("互斥指令：" + "；".join(conflicts))
     if b_hits:
         reasons.append("B 级严审情形：" + ",".join(b_hits) + "（转 B 级流程，本 demo 不放行）")
+    if white_hits:
+        reasons.append("白底标准照作内容配图：" + ",".join(white_hits) + "（事故级，白底三禁 1）")
     rejected = bool(reasons)
     verdict = "打回（" + "；".join(reasons) + "）" if rejected else "通过"
 
@@ -173,6 +202,9 @@ def main():
 
 ## B 级严审检查
 {'命中: ' + ','.join(b_hits) + ' -> 转 B 级严审，本 demo 不放行' if b_hits else '无 B 级严审情形 -> 通过'}
+
+## 白底禁令检查
+{'命中: ' + ','.join(white_hits) + ' -> 打回（事故级）' if white_hits else '未使用白底标准照 -> 通过'}
 
 {disclosure}
 
@@ -218,7 +250,16 @@ def main():
         "asset_grade": inp.get("asset_grade"),
         "uses_standard_portrait": bool(inp.get("uses_standard_portrait", False)),
     }
+    # 场景文字本身写明白底标准照/白底棚拍时，不靠调用者另设标志才拦（白底三禁）
+    if white_hits:
+        candidate["uses_standard_portrait"] = True
+    if not candidate["scene_category"] and any(w in scene for w in WHITE_STUDIO_WORDS):
+        candidate["scene_category"] = "白底棚拍"
     _rot_code, rot_report = check_rotation.run(ledger, candidate)
+    # 仓内台账路径按相对路径展示：样例输出不带本机绝对路径，可在任何机器上复现
+    ledger_abs = os.path.abspath(ledger)
+    if ledger_abs.startswith(SKILL + os.sep):
+        rot_report = rot_report.replace(ledger_abs, os.path.relpath(ledger_abs, SKILL))
     entry = f"""## 拟登记台账条目（字段见 references/ledger-format.md 正式格式 v1.0）
 - platform / post_no：{candidate['platform']} / {inp.get('post_no') or theme}
 - scene_category：{candidate['scene_category']}

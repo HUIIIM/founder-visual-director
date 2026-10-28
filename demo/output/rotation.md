@@ -1,6 +1,6 @@
 # 轮换预检（真读台账）
-- 台账：/home/hatch/workspace/fvd-p0-work/repo/used-visual-ledger.md
-- 结论：无法判定（降级）—— 台账文件不存在：/home/hatch/workspace/fvd-p0-work/repo/used-visual-ledger.md
+- 台账：used-visual-ledger.md
+- 结论：无法判定（降级）—— 台账文件不存在：used-visual-ledger.md
 - 说明：按 SKILL.md 降级规则标注「台账待补」，本次三项检查未执行，不得视为通过；请补台账后重跑，或按实物另行人工判定并留痕。
 
 ## 拟登记台账条目（字段见 references/ledger-format.md 正式格式 v1.0）

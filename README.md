@@ -89,9 +89,8 @@ docs/         product one-pager
 
 ## Security
 
-There is no `SECURITY.md` yet. To report a security issue (for example a committed secret), do not open a
-public issue; use GitHub private vulnerability reporting if it is enabled, or contact the maintainer
-[@HUIIIM](https://github.com/HUIIIM). CI runs gitleaks secret scanning and OpenSSF Scorecard.
+See [SECURITY.md](SECURITY.md) to report a security issue; do not open a public issue. Data handling,
+including the founder-likeness assets the skill refers to, is described in [docs/PRIVACY.md](docs/PRIVACY.md). CI runs the demo eval, gitleaks secret scanning, dependency review and OpenSSF Scorecard.
 
 ## Contributing
 

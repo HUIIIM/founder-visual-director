@@ -23,6 +23,9 @@ plastic skin, cgi, perfect skin, symmetrical face, beauty filter, oversized head
 ## B 级严审检查
 无 B 级严审情形 -> 通过
 
+## 白底禁令检查
+未使用白底标准照 -> 通过
+
 ## AI 标识与声明
 - ai_generated: true（本交付物为 AI 生成合成内容的生图 prompt）
 - ai_disclosure_text: 本图由 AI 生成
