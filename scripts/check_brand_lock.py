@@ -17,7 +17,11 @@
 
 用法：python3 scripts/check_brand_lock.py <文本文件> [更多文件...] [--bundle <bundle.json>]
 """
-import argparse, json, os, re, sys
+import argparse
+import json
+import os
+import re
+import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_BUNDLE = os.path.join(REPO, "references", "vertciti-brand-bundle.json")

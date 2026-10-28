@@ -6,7 +6,7 @@ Xiaohongshu, Instagram and LinkedIn.
 
 | | |
 |---|---|
-| Status | active · early — v1.0.0 (first release 2026-10-06); the runnable demo stops at prompt level (no image rendering); `evals/` holds one smoke evaluation |
+| Status | active · early — v1.1.0 in `SKILL.md` metadata, not yet tagged (first release 1.0.0 on 2026-10-06); the runnable demo stops at prompt level (no image rendering); `evals/` holds one smoke run and a 7-case eval set |
 | Type | vertciti skill (agent skill defined in [SKILL.md](SKILL.md)) |
 | Install / use | Load `SKILL.md` as a skill in your agent; try the zero-dependency demo with `python3 demo/run.py` |
 | Licence | MIT ([LICENSE](LICENSE)), Copyright (c) 2026 Jiahui Miao |
@@ -66,7 +66,9 @@ Missing fields are asked for, not filled in. Declared dependencies (from `SKILL.
 SKILL.md      the skill: director protocol, input contract, red lines
 demo/         prompt-level slice: input.json -> output/ (prompt.txt, checklist.md, rotation.md)
 references/   visual spec, photorealism checklist, rotation rules, model notes
-evals/        smoke evaluation (one so far)
+scripts/      rule checkers (rotation, brand lock, face consistency) and validate_skill.py
+tests/        unit tests: python3 -m unittest discover -s tests
+evals/        smoke run (smoke-01.md) and eval set (evals.json, skill-creator format)
 docs/         product one-pager
 ```
 

@@ -16,7 +16,10 @@ date 缺省取当天。
 台账路径：环境变量 FVD_LEDGER_PATH 或 skill 根目录 used-visual-ledger.md。
 退出码：0 通过 / 2 输入缺项 / 3 规则打回 / 4 规则读取失败。
 """
-import json, os, re, sys
+import json
+import os
+import re
+import sys
 from datetime import date as _date
 
 DEMO = os.path.dirname(os.path.abspath(__file__))

@@ -21,7 +21,11 @@
 用法：python3 scripts/check_face_consistency.py <台账.md|.json> [--all]
 （默认只查 已发布/待发 条目；--all 连同已退役条目一并查。）
 """
-import argparse, hashlib, os, re, sys
+import argparse
+import hashlib
+import os
+import re
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ledger_lib

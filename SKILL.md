@@ -1,13 +1,15 @@
 ---
-name: "founder-visual-director"
-description: "最终交付三件套：可执行的生图 prompt、全尺寸真实感 QA 检查表、素材轮换合规结论。为创始人（Miao）的 AI 视觉生产提供总导演级指导，输入场景需求即产出上述三部分交付物，覆盖小红书、IG、LinkedIn 等平台的创始人封面与配图。"
-user_invocable: true
-version: "1.0.0"
-triggers: "创始人封面/配图需要总导演级把控：定场景、定造型、把真实感、拦轮换事故"
-requires: "founder-visual-studio；视觉规范 v1.6/v1.7；素材轮换规则"
-inputs: "场景需求：主题/场景/平台/氛围"
-safety: "白底标准头像永不做内容配图；每张图全尺寸目检；相邻发布同服装同造型判重复"
-
+name: founder-visual-director
+description: "最终交付三件套：可执行的生图 prompt、全尺寸真实感 QA 检查表、素材轮换合规结论。为创始人（Miao）的 AI 视觉生产提供总导演级指导，输入场景需求即产出上述三部分交付物，覆盖小红书、IG、LinkedIn 等平台的创始人封面与配图。Use when planning or reviewing an AI-generated founder photo, cover image or portrait: writing the image prompt, running a photorealism QA checklist, or checking outfit/scene rotation against the asset ledger."
+license: MIT
+compatibility: "Agent skill (Agent Skills format). Demo and checkers need Python 3.10+ only; no network access. The asset ledger and reference images live in the caller's environment."
+metadata:
+  version: "1.1.0"
+  user-invocable: "true"
+  triggers: "创始人封面/配图需要总导演级把控：定场景、定造型、把真实感、拦轮换事故"
+  requires: "founder-visual-studio；视觉规范 v1.6/v1.7；素材轮换规则"
+  inputs: "场景需求：主题/场景/平台/氛围"
+  safety: "白底标准头像永不做内容配图；每张图全尺寸目检；相邻发布同服装同造型判重复"
 ---
 
 # founder-visual-director 创始人视觉指导
@@ -74,7 +76,7 @@ safety: "白底标准头像永不做内容配图；每张图全尺寸目检；�
 2. 点名机身/镜头（85mm f/1.8、iPhone、Kodak Portra 400 等），借它的天然缺陷（暗角、色散、颗粒）。
 3. 皮肤按年龄写具体质感（可见毛孔、法令纹），明写不磨皮、unretouched。
 4. 场景放 2–3 个有存在理由的生活细节；背景过分整洁或糊成一片 = 重做。
-5. 抓拍进行时，视线不直视镜头；拒绝摆拍微笑 stock 感。
+5. 视线随脸角度预设（Step 2-3）：抓拍预设下视线不直视镜头；摆拍预设下眼神可给镜头。两种预设都拒绝摆拍微笑 stock 感。
 6. 冲突审计：prompt 不许互斥指令（夜景 + 正午烈日、手机自拍 + 85mm 镜头之类）。
 7. 后处理：暗部加颗粒、轻微暗角、黑部提起（黑不死黑）；忌过 HDR、过锐化、过饱和。
 
@@ -96,6 +98,7 @@ safety: "白底标准头像永不做内容配图；每张图全尺寸目检；�
 
 按以下顺序走查，引用 `references/` 对应文件逐项判定。
 任一红线项 fail → 整单打回，全场景重生成，不许局部修补蒙混。
+重生成有上限：同一方案连续 3 次整单打回即停止生成，回到 Step 2 改方案（换场景、造型或机位），并在交付中写明已生成次数与对应成本；不许无上限重抽。
 
 1. **脸角度三规则**（`references/face-angle-rules.md`）：头身夹角 / 视线落点 / 动量一致性。
 2. **人体比例十项**（`references/proportion-qc.md`）：头身比、头占画面比、眼睛位置、三庭、眼间距鼻宽、肩宽、颈部、耳朵、透视畸变、对称完整。
@@ -148,8 +151,9 @@ AI 标识与声明为交付必填节：如实标注本交付物是否为 AI 生�
 下批生图前先定 style board：一批任务先出 1 张 style board（色板/字体/质感/参考角色一次定死），
 经目检通过后才批量生成；批次内风格漂移 > 目检阈值即停批回炉。style board 存档进台账（参考图角色字段，见下文 prompt 模板铁律）。
 
-## 交付格式：拼版 + 分层 PNG
-founder-visual-director 交付物升级：每次交付 = 1 张拼版总览（contact sheet，含全部方案缩略图 + 编号）
+## 渲染阶段交付格式：拼版 + 分层 PNG
+适用范围：本节只管外部生图管线出图之后的交付；本 skill 自身的交付仍是上文输出契约的三部分（prompt / QA 检查表 / 轮换合规），两者不互相替代。
+渲染阶段每次交付 = 1 张拼版总览（contact sheet，含全部方案缩略图 + 编号）
 + 每方案 1 套分层 PNG（底图层 / 标题层 / 装饰层分离，RGBA）。改字只换标题层，禁整张重生。
 
 ## 链路 Step -1：VLM 翻译官
