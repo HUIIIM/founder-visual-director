@@ -12,7 +12,9 @@
 校验失败不抛异常：返回 problems 列表，由调用方按降级规则处置
 （不得静默丢弃坏条目后给出无保留的「通过」）。
 """
-import json, os, re
+import json
+import os
+import re
 from datetime import date
 
 GRADES = ("S", "A", "B")
@@ -48,7 +50,7 @@ def effective_date(entry):
 
 def extract_entries_text(text):
     """从台账文本提取条目数组。返回 (entries, error)；error 非 None 表示不可解析。"""
-    blocks = re.findall(r"```json\s*\n(.*?)```", text, re.S)
+    blocks = re.findall(r"```json\s*\n(.*?)```", text, re.DOTALL)
     if not blocks:
         stripped = text.strip()
         if stripped.startswith("["):
@@ -72,7 +74,8 @@ def load_ledger(path):
     """
     if not os.path.exists(path):
         return None, [], "台账文件不存在：" + str(path)
-    text = open(path, encoding="utf-8").read()
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
     entries, error = extract_entries_text(text)
     if error:
         return None, [], error
@@ -84,7 +87,7 @@ def load_ledger(path):
 
 def validate_entry(entry, idx):
     """单条字段校验，返回缺陷字符串列表（空 = 合规）。"""
-    tag = "条目[%d]" % idx
+    tag = f"条目[{idx}]"
     if not isinstance(entry, dict):
         return [tag + " 不是对象"]
     lid = entry.get("ledger_id")
@@ -94,37 +97,37 @@ def validate_entry(entry, idx):
     for field in REQUIRED_FIELDS:
         value = entry.get(field)
         if value is None or (isinstance(value, str) and not value.strip()):
-            problems.append("%s 缺必填字段 %s" % (tag, field))
+            problems.append(f"{tag} 缺必填字段 {field}")
     if _parse_date(entry.get("date_made")) is None and entry.get("date_made") is not None:
-        problems.append("%s 的 date_made 不可解析：%r" % (tag, entry.get("date_made")))
+        problems.append("{} 的 date_made 不可解析：{!r}".format(tag, entry.get("date_made")))
     status = entry.get("status")
     if status is not None and status not in STATUSES:
-        problems.append("%s 的 status 非法：%r（应为 %s）" % (tag, status, "/".join(STATUSES)))
+        problems.append("{} 的 status 非法：{!r}（应为 {}）".format(tag, status, "/".join(STATUSES)))
     if status == "已发布" and entry.get("date_published") is None:
-        problems.append("%s 状态为已发布但缺 date_published" % tag)
+        problems.append(f"{tag} 状态为已发布但缺 date_published")
     if entry.get("date_published") is not None and _parse_date(entry.get("date_published")) is None:
-        problems.append("%s 的 date_published 不可解析：%r" % (tag, entry.get("date_published")))
+        problems.append("{} 的 date_published 不可解析：{!r}".format(tag, entry.get("date_published")))
     grade = entry.get("asset_grade")
     if grade is not None and grade not in GRADES:
-        problems.append("%s 的 asset_grade 非法：%r（应为 S/A/B）" % (tag, grade))
+        problems.append(f"{tag} 的 asset_grade 非法：{grade!r}（应为 S/A/B）")
     if entry.get("ai_generated") is True:
         if not entry.get("ai_disclosure_text"):
-            problems.append("%s ai_generated=true 但缺 ai_disclosure_text" % tag)
+            problems.append(f"{tag} ai_generated=true 但缺 ai_disclosure_text")
         if not entry.get("ai_disclosure_basis"):
-            problems.append("%s ai_generated=true 但缺 ai_disclosure_basis" % tag)
+            problems.append(f"{tag} ai_generated=true 但缺 ai_disclosure_basis")
     method = entry.get("ai_disclosure_method")
     if method is not None and method not in DISCLOSURE_METHODS:
-        problems.append("%s 的 ai_disclosure_method 非法：%r" % (tag, method))
+        problems.append(f"{tag} 的 ai_disclosure_method 非法：{method!r}")
     refs = entry.get("references")
     if refs is not None:
         if not isinstance(refs, list):
-            problems.append("%s 的 references 不是数组" % tag)
+            problems.append(f"{tag} 的 references 不是数组")
         else:
             for j, ref in enumerate(refs):
                 if not isinstance(ref, dict) or not ref.get("file") or not ref.get("role"):
-                    problems.append("%s 的 references[%d] 缺 file/role" % (tag, j))
+                    problems.append(f"{tag} 的 references[{j}] 缺 file/role")
                 elif ref["role"] not in ROLES:
-                    problems.append("%s 的 references[%d] 角色非法：%r" % (tag, j, ref["role"]))
+                    problems.append(f"{tag} 的 references[{j}] 角色非法：{ref['role']!r}")
     return problems
 
 
@@ -138,8 +141,8 @@ def validate_candidate(candidate):
         if value is None or (isinstance(value, str) and not value.strip()):
             problems.append("候选缺字段 " + field)
     if candidate.get("date") is not None and _parse_date(candidate.get("date")) is None:
-        problems.append("候选 date 不可解析：%r" % candidate.get("date"))
+        problems.append("候选 date 不可解析：{!r}".format(candidate.get("date")))
     grade = candidate.get("asset_grade")
     if grade is not None and grade not in GRADES:
-        problems.append("候选 asset_grade 非法：%r" % grade)
+        problems.append(f"候选 asset_grade 非法：{grade!r}")
     return problems

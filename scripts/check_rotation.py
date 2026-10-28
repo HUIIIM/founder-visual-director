@@ -21,7 +21,11 @@
   python3 scripts/check_rotation.py --ledger <台账.md> --candidate <候选.json>
   python3 scripts/check_rotation.py --ledger <台账.md> --candidate-json '<json>'
 """
-import argparse, json, os, re, sys
+import argparse
+import json
+import os
+import re
+import sys
 from datetime import date
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -35,10 +39,11 @@ ACTIVE_STATUSES = ("已发布", "待发")
 def load_rotation_rules(path=RULES):
     """从 rotation-rules.md 直读场景大类表与冷却期数值。任一读取为空返回 None。"""
     try:
-        text = open(path, encoding="utf-8").read()
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
     except OSError:
         return None
-    m = re.search(r"## 场景大类（判定粒度）\s*\n(.*?)\n## ", text, re.S)
+    m = re.search(r"## 场景大类（判定粒度）\s*\n(.*?)\n## ", text, re.DOTALL)
     if not m:
         return None
     categories = []
@@ -48,7 +53,7 @@ def load_rotation_rules(path=RULES):
             continue  # 说明行不含分隔符，跳过；只收大类枚举行
         categories.extend(c.strip() for c in line.split("/") if c.strip())
     cooldowns = {}
-    cm = re.search(r"## 冷却期\s*\n(.*?)\n## ", text, re.S)
+    cm = re.search(r"## 冷却期\s*\n(.*?)\n## ", text, re.DOTALL)
     if cm:
         for grade, days in re.findall(r"-\s*([SAB])\s*级：\s*(\d+)\s*天", cm.group(1)):
             cooldowns[grade] = int(days)
@@ -72,7 +77,7 @@ def evaluate(entries, candidate, rules, invalid_count=0):
     cand_problems = ledger_lib.validate_candidate(candidate)
     cand_date = _d(candidate.get("date"))
     if invalid_count:
-        notes.append("台账有 %d 条字段缺陷（见校验输出），结论带不确定性" % invalid_count)
+        notes.append(f"台账有 {invalid_count} 条字段缺陷（见校验输出），结论带不确定性")
     if cand_problems:
         notes.append("候选字段不全：" + "；".join(cand_problems))
 
@@ -92,8 +97,7 @@ def evaluate(entries, candidate, rules, invalid_count=0):
     for d, e in dated[:3]:
         for field, label in (("scene_category", "场景大类"), ("outfit", "服装"), ("styling", "造型")):
             if candidate.get(field) and e.get(field) == candidate.get(field):
-                hit.append("相邻 3 篇内%s重复：%s（%s，%s）"
-                           % (label, e.get(field), e.get("ledger_id"), d.isoformat()))
+                hit.append("相邻 3 篇内{}重复：{}（{}，{}）".format(label, e.get(field), e.get("ledger_id"), d.isoformat()))
     findings.extend(hit)
     checks.append("相邻 3 篇：%s" % ("违规 " + "；".join(hit) if hit else "通过"))
 
@@ -101,14 +105,13 @@ def evaluate(entries, candidate, rules, invalid_count=0):
     hit = []
     if candidate.get("scene_category"):
         if candidate["scene_category"] not in categories:
-            notes.append("候选场景大类 %r 未在 rotation-rules.md 大类表中登记（新大类应先登记）"
-                         % candidate["scene_category"])
+            notes.append("候选场景大类 {!r} 未在 rotation-rules.md 大类表中登记（新大类应先登记）".format(candidate["scene_category"]))
         for d, e in dated:
             if e.get("scene_category") == candidate["scene_category"]:
                 delta = abs((cand_date - d).days)
                 if delta < 14:
-                    hit.append("同场景大类 %s 距 %s 仅 %d 天（%s）"
-                               % (candidate["scene_category"], e.get("ledger_id"), delta, d.isoformat()))
+                    hit.append(f"同场景大类 {candidate['scene_category']} 距 {e.get('ledger_id')} "
+                               f"仅 {delta} 天（{d.isoformat()}）")
     findings.extend(hit)
     checks.append("14 天同大类：%s" % ("违规 " + "；".join(hit) if hit else "通过"))
 
@@ -119,13 +122,13 @@ def evaluate(entries, candidate, rules, invalid_count=0):
             if e.get("asset_id") == candidate["asset_id"]:
                 need = cooldowns.get(e.get("asset_grade"))
                 if need is None:
-                    notes.append("条目 %s 等级非法，冷却期无法判定" % e.get("ledger_id"))
+                    notes.append("条目 {} 等级非法，冷却期无法判定".format(e.get("ledger_id")))
                     continue
                 elapsed = (cand_date - d).days
                 if elapsed < need:
-                    hit.append("资产 %s 冷却期未满：等级 %s 需 %d 天，上次使用 %s（%s），仅隔 %d 天"
-                               % (candidate["asset_id"], e.get("asset_grade"), need,
-                                  e.get("ledger_id"), d.isoformat(), elapsed))
+                    hit.append(f"资产 {candidate['asset_id']} 冷却期未满：等级 {e.get('asset_grade')} "
+                               f"需 {need} 天，上次使用 {e.get('ledger_id')}（{d.isoformat()}），"
+                               f"仅隔 {elapsed} 天")
                 break  # dated 已按日期倒序，第一条即最近一次使用
     findings.extend(hit)
     checks.append("冷却期：%s" % ("违规 " + "；".join(hit) if hit else "通过"))
@@ -137,8 +140,8 @@ def evaluate(entries, candidate, rules, invalid_count=0):
                       if e.get("asset_grade") == "S"
                       and (d.year, d.month) == (cand_date.year, cand_date.month)]
         if len(month_uses) >= 2:
-            hit.append("S 级资产当月已用 %d 次（上限 2），候选为第 %d 次"
-                       % (len(month_uses), len(month_uses) + 1))
+            hit.append(f"S 级资产当月已用 {len(month_uses)} 次（上限 2），"
+                       f"候选为第 {len(month_uses) + 1} 次")
     findings.extend(hit)
     checks.append("S 级月度上限：%s" % ("违规 " + "；".join(hit) if hit else "通过"))
 
@@ -151,12 +154,10 @@ def evaluate(entries, candidate, rules, invalid_count=0):
                        if e.get("scene_category") == "白底棚拍"
                        and (d.year, d.month) == (cand_date.year, cand_date.month)]
         if month_white:
-            hit.append("白底棚拍原片当月已用作内容配图（%s），每月上限 1 次"
-                       % month_white[0].get("ledger_id"))
+            hit.append("白底棚拍原片当月已用作内容配图（{}），每月上限 1 次".format(month_white[0].get("ledger_id")))
         recent = dated[:1]
         if recent and recent[0][1].get("scene_category") == "白底棚拍":
-            hit.append("白底棚拍不得连续两篇使用（上一篇 %s 即白底棚拍）"
-                       % recent[0][1].get("ledger_id"))
+            hit.append("白底棚拍不得连续两篇使用（上一篇 {} 即白底棚拍）".format(recent[0][1].get("ledger_id")))
     findings.extend(hit)
     checks.append("白底三禁：%s" % ("违规 " + "；".join(hit) if hit else "通过"))
 
@@ -175,27 +176,26 @@ def run(ledger_path, candidate):
     if rules is None:
         return 3, "规则读取失败：references/rotation-rules.md 场景大类表/冷却期读取不完整，拒绝放行"
     entries, problems, fatal = ledger_lib.load_ledger(ledger_path)
-    lines = ["# 轮换预检（真读台账）", "- 台账：%s" % ledger_path]
+    lines = ["# 轮换预检（真读台账）", f"- 台账：{ledger_path}"]
     if fatal:
-        lines.append("- 结论：无法判定（降级）—— %s" % fatal)
+        lines.append(f"- 结论：无法判定（降级）—— {fatal}")
         lines.append("- 说明：按 SKILL.md 降级规则标注「台账待补」，本次三项检查未执行，不得视为通过；"
                      "请补台账后重跑，或按实物另行人工判定并留痕。")
         return 2, "\n".join(lines) + "\n"
     invalid_idx = {i for i, e in enumerate(entries) if ledger_lib.validate_entry(e, i)}
     valid = [e for i, e in enumerate(entries) if i not in invalid_idx]
     result = evaluate(valid, candidate, rules, invalid_count=len(entries) - len(valid))
-    lines.append("- 候选：%s / %s / %s / 资产 %s（%s 级）"
-                 % (candidate.get("platform"), candidate.get("date"),
+    lines.append("- 候选：{} / {} / {} / 资产 {}（{} 级）".format(candidate.get("platform"), candidate.get("date"),
                     candidate.get("scene_category"), candidate.get("asset_id"),
                     candidate.get("asset_grade")))
-    lines.append("- 台账条目：共 %d 条，合规 %d 条" % (len(entries), len(valid)))
+    lines.append(f"- 台账条目：共 {len(entries)} 条，合规 {len(valid)} 条")
     for p in problems:
-        lines.append("- 台账缺陷：%s" % p)
+        lines.append(f"- 台账缺陷：{p}")
     lines.append("")
     for c in result["checks"]:
-        lines.append("- 检查·%s" % c)
+        lines.append(f"- 检查·{c}")
     for n in result["notes"]:
-        lines.append("- 不确定性：%s" % n)
+        lines.append(f"- 不确定性：{n}")
     if result["findings"]:
         lines.append("")
         lines.append("## 违规明细")
@@ -204,7 +204,7 @@ def run(ledger_path, candidate):
         lines.append("- 处置建议：换场景大类 / 换服装造型 / 推迟到冷却期满后，并按 SKILL.md Step 1 "
                      "在 prompt 上标注「待场景确认」。")
     lines.append("")
-    lines.append("- 结论：%s" % result["verdict"])
+    lines.append("- 结论：{}".format(result["verdict"]))
     code = {"通过": 0, "条件通过": 0, "违规": 1, "无法判定": 2}[result["verdict"]]
     return code, "\n".join(lines) + "\n"
 
@@ -216,7 +216,8 @@ def main(argv=None):
     ap.add_argument("--candidate-json", help="候选 JSON 字符串（与 --candidate 二选一）")
     args = ap.parse_args(argv)
     if args.candidate:
-        candidate = json.load(open(args.candidate, encoding="utf-8"))
+        with open(args.candidate, encoding="utf-8") as f:
+            candidate = json.load(f)
     elif args.candidate_json:
         candidate = json.loads(args.candidate_json)
     else:

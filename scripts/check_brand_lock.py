@@ -17,7 +17,11 @@
 
 用法：python3 scripts/check_brand_lock.py <文本文件> [更多文件...] [--bundle <bundle.json>]
 """
-import argparse, json, os, re, sys
+import argparse
+import json
+import os
+import re
+import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_BUNDLE = os.path.join(REPO, "references", "vertciti-brand-bundle.json")
@@ -28,7 +32,8 @@ GENERIC_FAMILIES = {"sans-serif", "serif", "monospace", "system-ui", "cursive",
 def load_bundle(path):
     """直读 brand bundle，返回 (colors, fonts, wordmark, watchlist)；失败返回 None。"""
     try:
-        bundle = json.load(open(path, encoding="utf-8"))
+        with open(path, encoding="utf-8") as f:
+            bundle = json.load(f)
     except (OSError, json.JSONDecodeError):
         return None
     colors, fonts, watchlist = set(), set(), set()
@@ -76,51 +81,48 @@ def normalize_hex(value):
 
 
 def rgb_to_hex(r, g, b):
-    return "#%02X%02X%02X" % (int(r), int(g), int(b))
+    return f"#{int(r):02X}{int(g):02X}{int(b):02X}"
 
 
 def check_file(path, colors, fonts, wordmark, watchlist):
     """返回违规字符串列表（每条含 文件:行 与命中内容）。"""
     violations = []
     try:
-        lines = open(path, encoding="utf-8").read().splitlines()
+        with open(path, encoding="utf-8") as f:
+            lines = f.read().splitlines()
     except OSError as exc:
-        return ["%s：文件不可读（%s）" % (path, exc)]
+        return [f"{path}：文件不可读（{exc}）"]
     for lineno, line in enumerate(lines, 1):
-        where = "%s:%d" % (path, lineno)
+        where = f"{path}:{lineno}"
         # 1. 手写色值（hex）
         for m in re.finditer(r"#[0-9A-Fa-f]{6}\b|#[0-9A-Fa-f]{3}\b", line):
             value = normalize_hex(m.group(0))
             if value not in colors:
-                violations.append("%s 手写色值 %s 不在品牌锁色板内（bundle 允许 %d 个色值）"
-                                  % (where, m.group(0), len(colors)))
+                violations.append(f"{where} 手写色值 {m.group(0)} 不在品牌锁色板内"
+                                  f"（bundle 允许 {len(colors)} 个色值）")
         # 1b. 手写色值（rgb/rgba）
         for m in re.finditer(r"rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})", line):
             value = rgb_to_hex(m.group(1), m.group(2), m.group(3))
             if value not in colors:
-                violations.append("%s 手写色值 %s（=%s）不在品牌锁色板内"
-                                  % (where, m.group(0) + ")", value))
+                violations.append("{} 手写色值 {}（={}）不在品牌锁色板内".format(where, m.group(0) + ")", value))
         # 2a. font-family 声明
-        for m in re.finditer(r"font-family\s*:\s*([^;}{]+)", line, re.I):
+        for m in re.finditer(r"font-family\s*:\s*([^;}{]+)", line, re.IGNORECASE):
             for fam in m.group(1).split(","):
                 name = fam.strip().strip("'\"")
                 if not name or name.lower() in GENERIC_FAMILIES:
                     continue
                 if name not in fonts:
-                    violations.append("%s 字体 %r 不在品牌锁字体集内（允许：%s）"
-                                      % (where, name, " / ".join(sorted(fonts))))
+                    violations.append("{} 字体 {!r} 不在品牌锁字体集内（允许：{}）".format(where, name, " / ".join(sorted(fonts))))
         # 2b. 偏离字体观察名单（任意位置出现即偏离，如已淘汰的旧字体名）
         for name in sorted(watchlist):
             if name and name in line:
-                violations.append("%s 出现已淘汰/待替换字体 %r（品牌锁偏离）" % (where, name))
+                violations.append(f"{where} 出现已淘汰/待替换字体 {name!r}（品牌锁偏离）")
         # 3. 字标写法
         for m in re.finditer(r"(?i)vertciti", line):
             if m.group(0) != wordmark:
-                violations.append("%s 字标写法 %r 偏离品牌锁（应为全小写 %r）"
-                                  % (where, m.group(0), wordmark))
+                violations.append(f"{where} 字标写法 {m.group(0)!r} 偏离品牌锁（应为全小写 {wordmark!r}）")
         if re.search(r"(?i)vert[-\s]citi", line):
-            violations.append("%s 字标出现分隔写法（vert-citi / vert citi），应为 %r"
-                              % (where, wordmark))
+            violations.append(f"{where} 字标出现分隔写法（vert-citi / vert citi），应为 {wordmark!r}")
     return violations
 
 
@@ -131,21 +133,21 @@ def main(argv=None):
     args = ap.parse_args(argv)
     loaded = load_bundle(args.bundle)
     if loaded is None:
-        print("品牌锁读取失败：%s 不可读或色值/字体/字标不完整，拒绝放行" % args.bundle)
+        print(f"品牌锁读取失败：{args.bundle} 不可读或色值/字体/字标不完整，拒绝放行")
         return 2
     colors, fonts, wordmark, watchlist = loaded
-    print("品牌锁源：%s（允许色值 %d / 字体 %d / 字标 %r / 观察名单 %d）"
-          % (args.bundle, len(colors), len(fonts), wordmark, len(watchlist)))
+    print(f"品牌锁源：{args.bundle}（允许色值 {len(colors)} / 字体 {len(fonts)} / "
+          f"字标 {wordmark!r} / 观察名单 {len(watchlist)}）")
     all_violations = []
     for path in args.files:
         all_violations.extend(check_file(path, colors, fonts, wordmark, watchlist))
     if all_violations:
-        print("品牌锁校验：违规 %d 条" % len(all_violations))
+        print(f"品牌锁校验：违规 {len(all_violations)} 条")
         for v in all_violations:
             print("- " + v)
         print("结论：违规（偏离品牌锁的生成结果直接废弃，SKILL.md Brand Lock）")
         return 1
-    print("品牌锁校验：%d 个文件全部通过（无手写色值、无偏离字体、字标写法正确）" % len(args.files))
+    print(f"品牌锁校验：{len(args.files)} 个文件全部通过（无手写色值、无偏离字体、字标写法正确）")
     print("结论：通过")
     return 0
 

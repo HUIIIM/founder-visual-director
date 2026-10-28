@@ -16,7 +16,10 @@ date 缺省取当天。
 台账路径：环境变量 FVD_LEDGER_PATH 或 skill 根目录 used-visual-ledger.md。
 退出码：0 通过 / 2 输入缺项 / 3 规则打回 / 4 规则读取失败。
 """
-import json, os, re, sys
+import json
+import os
+import re
+import sys
 from datetime import date as _date
 
 DEMO = os.path.dirname(os.path.abspath(__file__))
@@ -34,14 +37,15 @@ def fenced_block_after(text, header):
     if idx < 0:
         return []
     seg = text[idx + len(header):]
-    m = re.search(r"```[^\n]*\n(.*?)```", seg, re.S)
+    m = re.search(r"```[^\n]*\n(.*?)```", seg, re.DOTALL)
     if not m:
         return []
     return [ln.rstrip() for ln in m.group(1).splitlines() if ln.strip()]
 
 
 def load_rules():
-    text = open(STANDARDS, encoding="utf-8").read()
+    with open(STANDARDS, encoding="utf-8") as f:
+        text = f.read()
     phrases = [ln.strip() for ln in fenced_block_after(text, "## 强制短语（正向必带）")]
     neg_lines = fenced_block_after(text, "## 固定否定词带（每次必带）")
     negative = " ".join(ln.strip() for ln in neg_lines)
@@ -78,7 +82,7 @@ def hits_in(text, tokens):
         if re.search(r"[^\x00-\xff]", tok):
             if tok in text:
                 out.append(tok)
-        elif re.search(r"\b" + re.escape(tok) + r"\b", text, re.I):
+        elif re.search(r"\b" + re.escape(tok) + r"\b", text, re.IGNORECASE):
             out.append(tok)
     return out
 
@@ -94,7 +98,7 @@ def load_input(path):
         with open(path, encoding="utf-8") as f:
             inp = json.load(f)
     except (OSError, ValueError) as e:
-        print("输入无法读取（%s），按契约应先问调用者：%s" % (path, e))
+        print(f"输入无法读取（{path}），按契约应先问调用者：{e}")
         return None
     if not isinstance(inp, dict):
         print("输入必须是 JSON 对象，按契约应先问调用者")
@@ -146,7 +150,7 @@ def main():
     for ph in phrases:
         masked = masked.replace(ph, " ")
     face_hits = hits_in(masked, face_words)
-    age_hits = [p for p in age_patterns if re.search(p, masked, re.I)]
+    age_hits = [p for p in age_patterns if re.search(p, masked, re.IGNORECASE)]
     # 检查三：冲突审计（互斥对，真判定：同对两边同时出现即冲突）
     conflicts = []
     scan_all = positive + " " + scene
@@ -210,7 +214,8 @@ def main():
 
 ## 终判：{verdict}
 """
-    open(os.path.join(OUT, "prompt.txt"), "w", encoding="utf-8").write(prompt)
+    with open(os.path.join(OUT, "prompt.txt"), "w", encoding="utf-8") as f:
+        f.write(prompt)
 
     # 输出二：QA 检查表骨架（skill 真实四段结构）
     checklist = """# QA 检查表（demo 骨架）
@@ -235,7 +240,8 @@ def main():
 
 > 任一红线 fail 即整单打回。demo 级全部标"待全尺寸复核"。
 """
-    open(os.path.join(OUT, "checklist.md"), "w", encoding="utf-8").write(checklist)
+    with open(os.path.join(OUT, "checklist.md"), "w", encoding="utf-8") as f:
+        f.write(checklist)
 
     # 输出三：轮换合规检查（真读台账判定：scripts/check_rotation.py；
     # 台账缺失/不可解析时按降级规则输出「无法判定」，绝不假装通过）
@@ -269,7 +275,8 @@ def main():
 - ai_disclosure_method：{method}
 - ai_disclosure_basis：《人工智能生成合成内容标识办法》；小红书 AI 生成内容标识规则；EU AI Act Art. 50""" if not rejected else "## 台账登记\n- 本单已打回，不登记台账。"
     rotation = rot_report + "\n" + entry + "\n"
-    open(os.path.join(OUT, "rotation.md"), "w", encoding="utf-8").write(rotation)
+    with open(os.path.join(OUT, "rotation.md"), "w", encoding="utf-8") as f:
+        f.write(rotation)
     print("demo 输出已生成：", OUT)
     print("终判：" + verdict)
     return 3 if rejected else 0

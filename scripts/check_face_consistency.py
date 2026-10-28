@@ -21,7 +21,11 @@
 用法：python3 scripts/check_face_consistency.py <台账.md|.json> [--all]
 （默认只查 已发布/待发 条目；--all 连同已退役条目一并查。）
 """
-import argparse, hashlib, os, re, sys
+import argparse
+import hashlib
+import os
+import re
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ledger_lib
@@ -45,55 +49,52 @@ def check_entry(entry, base_dir):
     tag = "条目 %s" % (entry.get("ledger_id") or "?")
     refs = entry.get("references")
     if not isinstance(refs, list) or not refs:
-        violations.append("%s 未登记结构化参考图（references 缺失或为空），"
-                          "anchor 身份锚无从核验" % tag)
+        violations.append(f"{tag} 未登记结构化参考图（references 缺失或为空），"
+                          "anchor 身份锚无从核验")
         refs = []
     anchors = [r for r in refs if isinstance(r, dict) and r.get("role") == "anchor"]
     if refs and len(anchors) != 1:
-        violations.append("%s anchor 参考图应恰好 1 张，实登记 %d 张" % (tag, len(anchors)))
+        violations.append(f"{tag} anchor 参考图应恰好 1 张，实登记 {len(anchors)} 张")
     seen = {}
     for ref in refs:
         if not isinstance(ref, dict):
             continue
         f, role = ref.get("file"), ref.get("role")
         if f in seen and seen[f] != role:
-            violations.append("%s 参考图 %s 兼任两角（%s / %s），违反 Reference Roles"
-                              % (tag, f, seen[f], role))
+            violations.append(f"{tag} 参考图 {f} 兼任两角（{seen[f]} / {role}），违反 Reference Roles")
         seen[f] = role
         digest = ref.get("sha256")
         if not digest or not SHA_RE.match(str(digest)):
-            violations.append("%s 参考图 %s（%s）未登记合法 sha256" % (tag, f, role))
+            violations.append(f"{tag} 参考图 {f}（{role}）未登记合法 sha256")
             continue
         path = str(f) if os.path.isabs(str(f)) else os.path.join(base_dir, str(f))
         if not os.path.exists(path):
-            violations.append("%s 参考图文件不存在：%s（解析为 %s）" % (tag, f, path))
+            violations.append(f"{tag} 参考图文件不存在：{f}（解析为 {path}）")
             continue
         actual = sha256_of(path)
         if actual.lower() != str(digest).lower():
-            violations.append("%s 参考图 %s 哈希不符：登记 %s… 实际 %s…（台账与实物对不上）"
-                              % (tag, f, str(digest)[:12], actual[:12]))
+            violations.append(f"{tag} 参考图 {f} 哈希不符：登记 {str(digest)[:12]}… 实际 {actual[:12]}…（台账与实物对不上）")
     summary = entry.get("reference_roles")
     if isinstance(summary, str) and summary.strip() and refs:
         found = {r for r in ledger_lib.ROLES if r in summary}
         structured = {r.get("role") for r in refs if isinstance(r, dict)}
         if found and found != structured:
-            violations.append("%s reference_roles 摘要角色 %s 与结构化登记 %s 不一致"
-                              % (tag, sorted(found), sorted(structured)))
+            violations.append(f"{tag} reference_roles 摘要角色 {sorted(found)} 与结构化登记 {sorted(structured)} 不一致")
         elif not found:
-            notes.append("%s reference_roles 摘要串无可识别角色，未做一致性比对" % tag)
+            notes.append(f"{tag} reference_roles 摘要串无可识别角色，未做一致性比对")
     # 预留接口：一图一记录（候选，本轮只校验已登记的，不强制）
     if entry.get("output_file") or entry.get("image_sha256"):
         out, digest = entry.get("output_file"), entry.get("image_sha256")
         if not out or not digest or not SHA_RE.match(str(digest or "")):
-            violations.append("%s 已启用一图一记录字段但 output_file/image_sha256 不完整" % tag)
+            violations.append(f"{tag} 已启用一图一记录字段但 output_file/image_sha256 不完整")
         else:
             path = str(out) if os.path.isabs(str(out)) else os.path.join(base_dir, str(out))
             if not os.path.exists(path):
-                violations.append("%s 产物文件不存在：%s" % (tag, out))
+                violations.append(f"{tag} 产物文件不存在：{out}")
             elif sha256_of(path).lower() != str(digest).lower():
-                violations.append("%s 产物 %s 哈希与 image_sha256 登记不符" % (tag, out))
+                violations.append(f"{tag} 产物 {out} 哈希与 image_sha256 登记不符")
     else:
-        notes.append("%s 一图一记录：未启用（output_file/image_sha256 接口预留）" % tag)
+        notes.append(f"{tag} 一图一记录：未启用（output_file/image_sha256 接口预留）")
     return violations, notes
 
 
@@ -104,23 +105,23 @@ def main(argv=None):
     args = ap.parse_args(argv)
     entries, problems, fatal = ledger_lib.load_ledger(args.ledger)
     if fatal:
-        print("面部一致性校验：无法判定（降级）—— %s" % fatal)
+        print(f"面部一致性校验：无法判定（降级）—— {fatal}")
         return 2
     base_dir = os.path.dirname(os.path.abspath(args.ledger))
     targets = [e for e in entries
                if args.all or e.get("status") in ("已发布", "待发")]
     all_violations, all_notes = [], []
     for p in problems:
-        all_notes.append("台账字段缺陷（ledger_lib）：%s" % p)
+        all_notes.append(f"台账字段缺陷（ledger_lib）：{p}")
     for entry in targets:
         v, n = check_entry(entry, base_dir)
         all_violations.extend(v)
         all_notes.extend(n)
-    print("面部一致性校验：台账 %s，受检条目 %d 条" % (args.ledger, len(targets)))
+    print(f"面部一致性校验：台账 {args.ledger}，受检条目 {len(targets)} 条")
     for n in all_notes:
-        print("- 注：%s" % n)
+        print(f"- 注：{n}")
     if all_violations:
-        print("违规 %d 条：" % len(all_violations))
+        print(f"违规 {len(all_violations)} 条：")
         for v in all_violations:
             print("- " + v)
         print("结论：违规（身份一致性只靠 anchor 参考图，登记不全/哈希不符即不得放行）")

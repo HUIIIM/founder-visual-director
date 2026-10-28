@@ -14,7 +14,7 @@ All notable changes to this project are documented here. The repo has no git tag
 - SKILL.md / prompt-standards.md「按年龄写皮肤」与「prompt 模板铁律」1 冲突、rotation-rules.md 白底三禁第 3 条歧义；SKILL.md「管线 403」改为如实说明由外部管线执行。 / Rule contradictions resolved.
 
 ### Added
-- `demo.yml` CI：每个 PR 跑 `demo/eval.sh` 并确认样例未被改写；`SECURITY.md`、`docs/PRIVACY.md`；`.gitignore` 忽略仓根台账。 / Demo CI, SECURITY.md, PRIVACY.md.
+- `demo.yml` CI：每个 PR 跑 `demo/eval.sh`、`ruff check`（`requirements-dev.txt` 按哈希安装）并确认样例未被改写；`demo/` 与 `scripts/` 清零 ruff 存量问题（输出逐字不变）；`SECURITY.md`、`docs/PRIVACY.md`；`.gitignore` 忽略仓根台账。 / Demo CI, SECURITY.md, PRIVACY.md.
 - 台账真实现（issue #6 P1 ③）：`references/ledger-format.md` 台账正式格式 v1.0（字段沿用 schema 草案 v0.1，定机器可读载体与结构化参考图字段 `references`，附备份说明）；`scripts/check_rotation.py` 轮换预检真读台账（相邻 3 篇 / 14 天同大类 / 冷却期 / S 级月度上限 / 白底三禁，规则数值运行时直读 rotation-rules.md），台账缺失/不可解析只出「无法判定（降级）」不冒充通过；`scripts/ledger_lib.py` 共用解析与字段校验；`demo/run.py` 轮换段接线真读判定（原仅查台账存在性）；样例台账与候选夹具入 `demo/fixtures/`，`demo/eval.sh` 纳为回归断言。 / Real ledger: formal ledger format v1.0, rotation precheck that actually reads the ledger, shared parser/validator, fixtures wired into eval.
 - 品牌锁与面部一致性可执行校验（issue #6 P1 ⑤）：`scripts/check_brand_lock.py`（运行时直读 `vertciti-brand-bundle.json`，校验手写色值/偏离字体/字标写法）；`scripts/check_face_consistency.py`（anchor 恰好 1 张、一图不兼两角、参考图存在性与 SHA-256 登记比对；一图一记录字段仅预留接口）。此前两项均只有散文规则、无任何检查。 / Executable brand-lock and face-consistency checkers (were prose-only).
 - AI 标识与声明字段（issue #6 P0）：SKILL.md 交付格式第七节 + `references/rotation-rules.md` 台账条目字段 schema 草案 v0.1（`ai_generated` / `ai_disclosure_text` / `ai_disclosure_method` / `ai_disclosure_basis`），对齐《人工智能生成合成内容标识办法》、小红书 AI 标识规则与 EU AI Act Art. 50。 / AI disclosure fields in the Step 5 delivery format and the draft ledger-entry schema.
