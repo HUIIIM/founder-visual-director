@@ -25,10 +25,10 @@ All notable changes to this project are documented here. The repo has no git tag
 - Step 4 增加重生成上限：同一方案连续 3 次整单打回即停，回 Step 2 改方案并记录次数与成本。 / Regeneration is capped at 3 full rejections per plan.
 - `evals/smoke-01.md` 与 `evals/work/*.txt` 删除人物外貌/年龄描述与本地照片文件名（替换为中性说明）。 / Personal appearance details and photo filenames redacted from eval records.
 
-### Added (lint, tests, evals)
+### Added (tests, evals)
 - `scripts/validate_skill.py` + `tests/`：skill 包校验与单元测试（frontmatter 规范、引用路径存在、SKILL.md 内联强制短语/否定词带与 prompt-standards.md 一致、evals.json 格式）。 / Skill-package validator with unit tests.
 - `evals/evals.json`：7 例评测集（skill-creator 格式，带断言）。 / 7-case eval set.
-- CI `lint.yml`：ruff（按哈希安装的 `requirements-dev.txt`，规则见 `ruff.toml`）、单元测试、skill 包校验；Dependabot 增加 pip。 / Lint and test CI with hash-pinned ruff.
+- CI `tests.yml`：每个 PR 跑单元测试与 skill 包校验。 / Unit-test and skill-validation CI.
 
 ## 2026-10-14
 

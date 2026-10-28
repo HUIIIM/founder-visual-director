@@ -30,7 +30,7 @@
 | prompt 规范 | 固定否定词带 + 禁用词 grep（限正向 prompt）+ 冲突审计 | 自由文本 prompt |
 
 ## 证据
-- 测试：`demo/eval.sh` 跑规则直读校验与回归夹具；`tests/` 单元测试覆盖 skill 包校验（`scripts/validate_skill.py`：Agent Skills frontmatter、SKILL.md 内引用路径、SKILL.md 内联规则与 references 一致、`evals/evals.json` 格式）。CI 工作流 `lint.yml` 在每个 PR 上跑 ruff、单元测试与 skill 包校验。
+- 测试：`demo/eval.sh` 跑规则直读校验与回归夹具；`tests/` 单元测试覆盖 skill 包校验（`scripts/validate_skill.py`：Agent Skills frontmatter、SKILL.md 内引用路径、SKILL.md 内联规则与 references 一致、`evals/evals.json` 格式）。CI 工作流 `tests.yml` 在每个 PR 上跑单元测试与 skill 包校验。
 - 评测集：`evals/evals.json` 7 例（skill-creator 格式，每例带可判定断言）；尚未跑过带/不带 skill 的对照基准，提升幅度无数据。
 - 真实运行：`demo/output/`（样例输入产出的三件套）；`evals/smoke-01.md`（2026-10-03 一次完整 dry-run 记录，结论为"skill 本体 pass、输入场景违规被拦下"）。
 - 不能证明的：生成图片的真实感提升幅度、对发布效果的影响、误判率——均无数据，未确认（TBD）。demo 不渲染图片；轮换检查依赖本地台账 `used-visual-ledger.md`，仓库内不含该台账，缺失时 demo 按降级规则输出"台账待补"。

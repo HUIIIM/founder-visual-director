@@ -9,7 +9,7 @@ import unittest
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
-import validate_skill  # noqa: E402
+import validate_skill
 
 
 class RepoIsValid(unittest.TestCase):

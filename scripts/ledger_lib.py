@@ -12,9 +12,7 @@
 校验失败不抛异常：返回 problems 列表，由调用方按降级规则处置
 （不得静默丢弃坏条目后给出无保留的「通过」）。
 """
-import json
-import os
-import re
+import json, os, re
 from datetime import date
 
 GRADES = ("S", "A", "B")

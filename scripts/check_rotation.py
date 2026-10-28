@@ -21,11 +21,7 @@
   python3 scripts/check_rotation.py --ledger <台账.md> --candidate <候选.json>
   python3 scripts/check_rotation.py --ledger <台账.md> --candidate-json '<json>'
 """
-import argparse
-import json
-import os
-import re
-import sys
+import argparse, json, os, re, sys
 from datetime import date
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -49,12 +49,12 @@ def parse_frontmatter(text):
         nested = line.startswith((" ", "\t"))
         m = re.match(r"^\s*([A-Za-z0-9_-]+):(?:\s+(.*))?$", line)
         if not m:
-            errors.append("frontmatter line %d is not 'key: value'" % n)
+            errors.append(f"frontmatter line {n} is not 'key: value'")
             continue
         key, value = m.group(1), m.group(2)
         if nested:
             if current is None or not isinstance(fields.get(current), dict):
-                errors.append("frontmatter line %d is indented but has no parent map" % n)
+                errors.append(f"frontmatter line {n} is indented but has no parent map")
                 continue
             fields[current][key] = _unquote(value or "")
         elif value is None or value.strip() == "":
@@ -68,30 +68,30 @@ def check_frontmatter(fields, skill_dir):
     errors = []
     extra = sorted(set(fields) - ALLOWED_FIELDS)
     if extra:
-        errors.append("unexpected frontmatter fields %s; allowed: %s" % (extra, sorted(ALLOWED_FIELDS)))
+        errors.append(f"unexpected frontmatter fields {extra}; allowed: {sorted(ALLOWED_FIELDS)}")
     name = fields.get("name")
     if not isinstance(name, str) or not name:
         errors.append("'name' is required")
     else:
         if len(name) > MAX_NAME or not NAME_RE.match(name):
-            errors.append("'name' must be 1-%d lowercase letters, digits and single hyphens" % MAX_NAME)
+            errors.append(f"'name' must be 1-{MAX_NAME} lowercase letters, digits and single hyphens")
         dirname = os.path.basename(os.path.abspath(skill_dir))
         if dirname != name:
-            errors.append("'name' (%s) must match the skill directory name (%s)" % (name, dirname))
+            errors.append(f"'name' ({name}) must match the skill directory name ({dirname})")
     desc = fields.get("description")
     if not isinstance(desc, str) or not desc.strip():
         errors.append("'description' is required")
     elif len(desc) > MAX_DESCRIPTION:
-        errors.append("'description' is %d characters; max %d" % (len(desc), MAX_DESCRIPTION))
+        errors.append(f"'description' is {len(desc)} characters; max {MAX_DESCRIPTION}")
     comp = fields.get("compatibility")
     if comp is not None and (not isinstance(comp, str) or not 1 <= len(comp) <= MAX_COMPATIBILITY):
-        errors.append("'compatibility' must be 1-%d characters" % MAX_COMPATIBILITY)
+        errors.append(f"'compatibility' must be 1-{MAX_COMPATIBILITY} characters")
     meta = fields.get("metadata")
     if meta is not None and not isinstance(meta, dict):
         errors.append("'metadata' must be a map of string keys to string values")
     for key in ("license", "allowed-tools"):
         if key in fields and not isinstance(fields[key], str):
-            errors.append("'%s' must be a string" % key)
+            errors.append(f"'{key}' must be a string")
     return errors
 
 
@@ -99,7 +99,7 @@ def check_paths(body, skill_dir):
     errors = []
     for path in sorted(set(re.findall(r"`((?:references|scripts|demo|evals|docs)/[^`\s]+)`", body))):
         if not os.path.exists(os.path.join(skill_dir, path)):
-            errors.append("SKILL.md mentions %s, which does not exist" % path)
+            errors.append(f"SKILL.md mentions {path}, which does not exist")
     return errors
 
 
@@ -108,7 +108,7 @@ def fenced_block_after(text, heading):
     i = text.find(heading)
     if i < 0:
         return None
-    m = re.search(r"```[^\n]*\n(.*?)```", text[i:], re.S)
+    m = re.search(r"```[^\n]*\n(.*?)```", text[i:], re.DOTALL)
     return m.group(1) if m else None
 
 
@@ -124,17 +124,16 @@ def check_rule_sync(skill_text, skill_dir):
         with open(path, encoding="utf-8") as f:
             std = f.read()
     except OSError as e:
-        return ["cannot read %s: %s" % (path, e)]
+        return [f"cannot read {path}: {e}"]
     phrases = fenced_block_after(std, "## 强制短语")
     negative = fenced_block_after(std, "## 固定否定词带")
     if phrases is None or negative is None:
         return ["prompt-standards.md is missing the 强制短语 or 固定否定词带 block"]
-    m = re.search(r"强制短语（正向必带）：\n(.*?)\n\n", skill_text, re.S)
+    m = re.search(r"强制短语（正向必带）：\n(.*?)\n\n", skill_text, re.DOTALL)
     inline_phrases = re.findall(r"`([^`]+)`", m.group(1)) if m else []
     source_phrases = [p.strip() for p in phrases.splitlines() if p.strip()]
     if inline_phrases != source_phrases:
-        errors.append("SKILL.md mandatory phrases %s differ from prompt-standards.md %s"
-                      % (inline_phrases, source_phrases))
+        errors.append(f"SKILL.md mandatory phrases {inline_phrases} differ from prompt-standards.md {source_phrases}")
     m = re.search(r"固定否定词带（每次必带）：\n`([^`]+)`", skill_text)
     inline_negative = _norm_items(m.group(1)) if m else []
     if inline_negative != _norm_items(negative):
@@ -150,29 +149,29 @@ def check_evals(skill_dir):
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
     except ValueError as e:
-        return ["evals/evals.json is not valid JSON: %s" % e]
+        return [f"evals/evals.json is not valid JSON: {e}"]
     errors = []
     if not isinstance(data, dict) or not isinstance(data.get("evals"), list) or not data["evals"]:
         return ["evals/evals.json must be an object with a non-empty 'evals' list"]
     seen = set()
     for i, case in enumerate(data["evals"]):
-        where = "evals[%d]" % i
+        where = f"evals[{i}]"
         if not isinstance(case, dict):
-            errors.append("%s is not an object" % where)
+            errors.append(f"{where} is not an object")
             continue
         cid = case.get("id")
         if cid in seen or not isinstance(cid, int):
-            errors.append("%s id %r is missing, not an integer or duplicated" % (where, cid))
+            errors.append(f"{where} id {cid!r} is missing, not an integer or duplicated")
         seen.add(cid)
         for key in ("prompt", "expected_output"):
             if not isinstance(case.get(key), str) or not case[key].strip():
-                errors.append("%s needs a non-empty '%s'" % (where, key))
+                errors.append(f"{where} needs a non-empty '{key}'")
         asserts = case.get("assertions")
         if not isinstance(asserts, list) or not asserts or not all(isinstance(a, str) and a for a in asserts):
-            errors.append("%s needs a non-empty list of string 'assertions'" % where)
+            errors.append(f"{where} needs a non-empty list of string 'assertions'")
         for fpath in case.get("files", []):
             if not os.path.exists(os.path.join(skill_dir, fpath)):
-                errors.append("%s lists missing file %s" % (where, fpath))
+                errors.append(f"{where} lists missing file {fpath}")
     return errors
 
 
@@ -182,12 +181,12 @@ def validate(skill_dir):
         with open(path, encoding="utf-8") as f:
             text = f.read()
     except OSError as e:
-        return ["cannot read %s: %s" % (path, e)]
+        return [f"cannot read {path}: {e}"]
     fields, errors = parse_frontmatter(text)
     errors += check_frontmatter(fields, skill_dir)
     lines = text.count("\n") + 1
     if lines > MAX_LINES:
-        errors.append("SKILL.md has %d lines; keep it under %d" % (lines, MAX_LINES))
+        errors.append(f"SKILL.md has {lines} lines; keep it under {MAX_LINES}")
     errors += check_paths(text, skill_dir)
     errors += check_rule_sync(text, skill_dir)
     errors += check_evals(skill_dir)
@@ -201,7 +200,7 @@ def main(argv):
         print("FAIL: " + e)
     if errors:
         return 1
-    print("PASS: skill package valid (%s)" % os.path.abspath(skill_dir))
+    print(f"PASS: skill package valid ({os.path.abspath(skill_dir)})")
     return 0
 
 
