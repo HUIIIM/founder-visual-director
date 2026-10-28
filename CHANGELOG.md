@@ -6,7 +6,15 @@ All notable changes to this project are documented here. The repo has no git tag
 
 ## [Unreleased]
 
+### Fixed
+- demo 输入校验：非 JSON 对象 / JSON 损坏 / 必填项非字符串一律以退出码 2 拒绝（此前抛 traceback 或放行）。 / Bad input is refused with exit 2 instead of a traceback.
+- 输入字段单行化并去掉 `#`，`scene` 里的换行不能再伪造「## 终判：通过」等段落。 / Inputs can no longer forge report sections.
+- 场景文字写明白底标准照时直接打回（事故级，不依赖台账或调用者另设 `uses_standard_portrait`）；写明白底/棚拍且未给大类时按「白底棚拍」判定。 / White-background portrait in the scene text is rejected on its own.
+- 样例输出不再带本机绝对台账路径、`input.json` 固定日期，`demo/output/` 可在任何机器上逐字复现；`eval.sh` 先比对再重写样例。 / Sample output is reproducible.
+- SKILL.md / prompt-standards.md「按年龄写皮肤」与「prompt 模板铁律」1 冲突、rotation-rules.md 白底三禁第 3 条歧义；SKILL.md「管线 403」改为如实说明由外部管线执行。 / Rule contradictions resolved.
+
 ### Added
+- `demo.yml` CI：每个 PR 跑 `demo/eval.sh` 并确认样例未被改写；`SECURITY.md`、`docs/PRIVACY.md`；`.gitignore` 忽略仓根台账。 / Demo CI, SECURITY.md, PRIVACY.md.
 - 台账真实现（issue #6 P1 ③）：`references/ledger-format.md` 台账正式格式 v1.0（字段沿用 schema 草案 v0.1，定机器可读载体与结构化参考图字段 `references`，附备份说明）；`scripts/check_rotation.py` 轮换预检真读台账（相邻 3 篇 / 14 天同大类 / 冷却期 / S 级月度上限 / 白底三禁，规则数值运行时直读 rotation-rules.md），台账缺失/不可解析只出「无法判定（降级）」不冒充通过；`scripts/ledger_lib.py` 共用解析与字段校验；`demo/run.py` 轮换段接线真读判定（原仅查台账存在性）；样例台账与候选夹具入 `demo/fixtures/`，`demo/eval.sh` 纳为回归断言。 / Real ledger: formal ledger format v1.0, rotation precheck that actually reads the ledger, shared parser/validator, fixtures wired into eval.
 - 品牌锁与面部一致性可执行校验（issue #6 P1 ⑤）：`scripts/check_brand_lock.py`（运行时直读 `vertciti-brand-bundle.json`，校验手写色值/偏离字体/字标写法）；`scripts/check_face_consistency.py`（anchor 恰好 1 张、一图不兼两角、参考图存在性与 SHA-256 登记比对；一图一记录字段仅预留接口）。此前两项均只有散文规则、无任何检查。 / Executable brand-lock and face-consistency checkers (were prose-only).
 - AI 标识与声明字段（issue #6 P0）：SKILL.md 交付格式第七节 + `references/rotation-rules.md` 台账条目字段 schema 草案 v0.1（`ai_generated` / `ai_disclosure_text` / `ai_disclosure_method` / `ai_disclosure_basis`），对齐《人工智能生成合成内容标识办法》、小红书 AI 标识规则与 EU AI Act Art. 50。 / AI disclosure fields in the Step 5 delivery format and the draft ledger-entry schema.
