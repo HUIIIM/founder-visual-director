@@ -6,7 +6,7 @@ Xiaohongshu, Instagram and LinkedIn.
 
 | | |
 |---|---|
-| Status | active · early — v1.1.0 in `SKILL.md` metadata, not yet tagged (first release 1.0.0 on 2026-10-06); the runnable demo stops at prompt level (no image rendering); `evals/` holds one smoke run and a 7-case eval set |
+| Status | active · early — v1.1.0 (released 2026-10-30 with an SBOM and SLSA provenance, see [Releases](https://github.com/HUIIIM/founder-visual-director/releases) and [docs/RELEASING.md](docs/RELEASING.md); first release 1.0.0 on 2026-10-06); the runnable demo stops at prompt level (no image rendering); `evals/` holds one smoke run and a 7-case eval set |
 | Type | vertciti skill (agent skill defined in [SKILL.md](SKILL.md)) |
 | Install / use | Load `SKILL.md` as a skill in your agent; try the zero-dependency demo with `python3 demo/run.py` |
 | Licence | MIT ([LICENSE](LICENSE)), Copyright (c) 2026 Jiahui Miao |
