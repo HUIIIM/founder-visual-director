@@ -92,7 +92,7 @@ docs/         product one-pager
 ## Security
 
 See [SECURITY.md](SECURITY.md) to report a security issue; do not open a public issue. Data handling,
-including the founder-likeness assets the skill refers to, is described in [docs/PRIVACY.md](docs/PRIVACY.md). CI runs the demo eval, gitleaks secret scanning, dependency review and OpenSSF Scorecard.
+including the founder-likeness assets the skill refers to, is described in [docs/PRIVACY.md](docs/PRIVACY.md). CI runs the demo eval with ruff lint, unit tests and skill validation, gitleaks secret scanning, dependency review and OpenSSF Scorecard. The public OpenSSF Scorecard score was 6.9 / 10 on 2026-10-30 ([current score](https://scorecard.dev/viewer/?uri=github.com/HUIIIM/founder-visual-director)); Code-Review and Maintained are 0 and branch protection is not enabled.
 
 ## Contributing
 

@@ -238,6 +238,9 @@ def main():
 - [ ] 背景无乱入文字/畸形路人
 - [ ] 背景虚化层次自然
 
+## 发布前
+- [ ] 替代文本（alt text）已写：描述画面内容，含封面文字原文
+
 > 任一红线 fail 即整单打回。demo 级全部标"待全尺寸复核"。
 """
     with open(os.path.join(OUT, "checklist.md"), "w", encoding="utf-8") as f:

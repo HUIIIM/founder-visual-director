@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The repo has no git tag
 
 ## [Unreleased]
 
+### Added (publishing)
+- 发布前动作增加替代文本（alt text）要求，QA 检查表增加对应勾选项；README 写明 OpenSSF Scorecard 公开分（2026-10-30 为 6.9 / 10）及未达项。 / Alt-text step before publishing; README states the public Scorecard score.
+
 ### Fixed
 - demo 输入校验：非 JSON 对象 / JSON 损坏 / 必填项非字符串一律以退出码 2 拒绝（此前抛 traceback 或放行）。 / Bad input is refused with exit 2 instead of a traceback.
 - 输入字段单行化并去掉 `#`，`scene` 里的换行不能再伪造「## 终判：通过」等段落。 / Inputs can no longer forge report sections.
