@@ -9,7 +9,7 @@
 2. **点名机身/镜头**：85mm f/1.8、iPhone、Kodak Portra 400 等，借它的天然缺陷（暗角、色散、颗粒）。
 3. **皮肤诚实**：写具体质感（可见毛孔、肤质纹理），明写"不磨皮、unretouched"；不写年龄、五官等面部特征词（SKILL.md「prompt 模板铁律」1 优先）。
 4. **生活细节**：场景放 2–3 个有存在理由的生活细节；背景过分整洁或糊成一片 = 重做。
-5. **抓拍进行时**：视线不直视镜头；拒绝摆拍微笑 stock 感。
+5. **视线随预设**：抓拍预设下视线不直视镜头；摆拍预设下眼神可给镜头（见 `face-angle-rules.md`「摆拍与抓拍没有中间态」）；两种都拒绝摆拍微笑 stock 感。
 6. **冲突审计**：prompt 不许互斥指令（"夜景" + "正午烈日"、"手机自拍" + "85mm 镜头"之类）。
 7. **后处理**：暗部加颗粒、轻微暗角、黑部提起（黑不死黑）；忌过 HDR、过锐化、过饱和；设备故事与后期一致（说 iPhone 就得是手机味后期）。
 
@@ -38,6 +38,10 @@ oversized head, elongated neck, narrow shoulders, floating head, wide-angle dist
 cinematic / cinematic lighting / 提亮暗部 / lift shadows / brighten /
 HDR / 过饱和 / oversaturated / 电影感灯光 / 完美皮肤 / perfect skin / flawless skin
 ```
+
+与品牌风格词的关系：`vertciti-brand-bundle.json` 的 `deep-style-keywords`（如 "dark cinematic"）和
+`visual-anchor-spec.md` 的「暗调电影质感」是给人看的美术方向，**不得原样写进 prompt**。
+写进 prompt 时改用可执行的摄影描述，例如 `low-key exposure, deep shadows, subtle film grain`。
 
 ## 机读规则附表（工具直读，v0.1）
 

@@ -26,6 +26,17 @@ All notable changes to this project are documented here. The repo has no git tag
 ### Fixed
 - demo 按 skill 规则飞行（issue #6 P0）：`demo/run.py` 运行时直读 references 的强制短语、固定否定词带与禁用词表 v1.0，删除内置的另一套否定词/禁用词副本；冲突审计、面部描述检查、B 级严审均为真判定（原冲突审计为写死的"通过"，原 demo 自身 prompt 含禁用词 `cinematic` 与面部/年龄描述）；`demo/eval.sh` 在 prompt 被打回时真 FAIL（原实现被拒仍打印 PASS），并内置两个"必被拒"回归夹具。 / Demo now loads its rules from references at runtime; eval truly fails on rejection.
 - gitleaks workflow 增加 `pull-requests: read` 权限，避免在 PR 上列取提交时 403。 / gitleaks workflow gains `pull-requests: read` so PR scans don't 403.
+- SKILL.md 规则矛盾（issue #6 超出条款 6）：Step 3-5「视线不直视镜头」改为随脸角度预设（摆拍可给镜头）；品牌风格词 "dark cinematic" 与禁用词 `cinematic` 的关系写明（风格词不进 prompt）；「拼版 + 分层 PNG」标明为渲染阶段交付，不替代三部分输出契约。 / Rule contradictions resolved.
+
+### Changed
+- SKILL.md frontmatter 改为 Agent Skills 规范字段（name / description / license / compatibility / metadata），原 `version`、`user_invocable`、`triggers`、`requires`、`inputs`、`safety` 移入 `metadata`；版本号 1.1.0 与正文「v1.1 新增三章」对齐（尚未打 tag）。description 补英文触发词。 / Spec-compliant frontmatter; version 1.1.0.
+- Step 4 增加重生成上限：同一方案连续 3 次整单打回即停，回 Step 2 改方案并记录次数与成本。 / Regeneration is capped at 3 full rejections per plan.
+- `evals/smoke-01.md` 与 `evals/work/*.txt` 删除人物外貌/年龄描述与本地照片文件名（替换为中性说明）。 / Personal appearance details and photo filenames redacted from eval records.
+
+### Added (tests, evals)
+- `scripts/validate_skill.py` + `tests/`：skill 包校验与单元测试（frontmatter 规范、引用路径存在、SKILL.md 内联强制短语/否定词带与 prompt-standards.md 一致、evals.json 格式）。 / Skill-package validator with unit tests.
+- `evals/evals.json`：7 例评测集（skill-creator 格式，带断言）。 / 7-case eval set.
+- CI `tests.yml`：每个 PR 跑单元测试与 skill 包校验。 / Unit-test and skill-validation CI.
 
 ## 2026-10-14
 

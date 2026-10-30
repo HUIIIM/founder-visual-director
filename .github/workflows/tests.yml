@@ -1,0 +1,30 @@
+# Unit tests and skill-package validation on every PR. vertciti standard QA-1.
+# Lint (ruff) runs in demo.yml.
+name: Tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    name: unit tests, skill validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          # validate_skill.py checks that the skill name matches its directory name.
+          path: founder-visual-director
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+      - name: Unit tests
+        working-directory: founder-visual-director
+        run: python -m unittest discover -s tests -v
+      - name: Skill package validation (Agent Skills spec, rule sync, evals)
+        working-directory: founder-visual-director
+        run: python scripts/validate_skill.py

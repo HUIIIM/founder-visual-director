@@ -1,0 +1,95 @@
+{
+  "skill_name": "founder-visual-director",
+  "format": "Anthropic skill-creator evals.json (id / prompt / expected_output / files), plus an 'assertions' list per case that a grader marks passed or failed with evidence.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "rotation-violation-blocks-production-prompt",
+      "prompt": "用 founder-visual-director 给小红书下一篇封面出方案：城市晨跑后拉伸，3:4，叙事调性生活感，计划 2026-10-26 发布。台账是 demo/fixtures/ledger-violation.md，候选造型见 demo/fixtures/candidate-violation.json。",
+      "expected_output": "轮换预检结论为「违规」，列出相邻 3 篇服装/造型重复、14 天同场景大类、冷却期未满的证据和处置建议；prompt 标注「待场景确认」，不作为可投产版本交付。",
+      "files": ["demo/fixtures/ledger-violation.md", "demo/fixtures/candidate-violation.json"],
+      "assertions": [
+        "Rotation verdict is 违规 (violation), not 通过 or 条件通过",
+        "Cites the specific ledger entries that collide (outfit, styling, same scene category within 14 days, cooldown)",
+        "Gives at least one remediation: change scene category or postpone past the cooldown",
+        "The image prompt is marked 待场景确认 and is not presented as production-ready"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "missing-brief-fields-are-asked-not-invented",
+      "prompt": "帮我出一张 LinkedIn 的创始人配图 prompt，要有质感。",
+      "expected_output": "先列出缺失的输入契约字段（场景需求、画幅、叙事调性）并提问，不自行补全场景直接产出 prompt。",
+      "files": [],
+      "assertions": [
+        "Asks for the missing input-contract fields (at least scene, aspect ratio and tone)",
+        "Does not produce a final image prompt before the missing fields are supplied",
+        "Does not invent a scene and present it as the user's brief"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "recognizable-person-goes-to-b-level-review",
+      "prompt": "小红书第 12 篇封面：创始人在晚宴上与一位名人合影，竖版 3:4，强抓眼球。",
+      "expected_output": "识别为 B 级（真实可识别人物）场景，说明本 skill 不放行、需转 B 级严审流程，不产出可投产 prompt。",
+      "files": [],
+      "assertions": [
+        "Classifies the brief as B-level because it involves a real, recognizable person",
+        "States the skill will not release it and routes it to the stricter B-level review",
+        "Does not output a production-ready prompt for this scene"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "conflicting-instructions-are-rewritten",
+      "prompt": "IG 日常配图：夜景天台手机自拍，正午烈日感的暖光，1:1，生活感。",
+      "expected_output": "冲突审计命中互斥指令（夜景 × 正午烈日；手机自拍 × 强制短语里的 85mm 镜头），说明冲突并给出改写后的单一主光源与机位方案。",
+      "files": [],
+      "assertions": [
+        "Flags night scene versus midday sun as mutually exclusive",
+        "Flags phone selfie versus the mandatory 85mm lens phrase as mutually exclusive",
+        "The final positive prompt keeps exactly one main light source and one camera story",
+        "The final positive prompt still contains all three mandatory phrases verbatim"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "face-and-age-wording-is-refused",
+      "prompt": "LinkedIn 头像风格的工作照，16:9，old money 克制。让他笑得阳光一点、看起来年轻十岁，眼睛再大一点。",
+      "expected_output": "说明 prompt 模板铁律禁止写面部特征与年龄感，身份一致性只靠 anchor 参考图；产出的正向 prompt 不含笑容、年龄、眼睛等面部词，并声明参考图角色。",
+      "files": [],
+      "assertions": [
+        "Explains that face, smile and age wording is not allowed in the prompt and why",
+        "The positive prompt contains no face-feature or age words (e.g. smile, eyes, younger, years old)",
+        "Declares an anchor reference image as the only identity source",
+        "Banned-word grep of the positive prompt reports zero hits"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "long-chinese-title-uses-typeset-later",
+      "prompt": "小红书第 11 篇封面，3:4，grind 叙事：书房夜景，标题文案「一个人的公司如何在三十天内把产品从零做到第一个付费客户」。",
+      "expected_output": "声明 text-mode = typeset_later（文案超过 8 个汉字），底图不含文字并预留 25–35% 标题位，标题后期排版；不把整段文案写进 prompt。",
+      "files": [],
+      "assertions": [
+        "Declares text-mode typeset_later (or none), not exact_short, because the title exceeds 8 Chinese characters",
+        "The positive prompt does not contain the title text",
+        "Reserves 25-35% clean space for the title, top or left"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "clean-brief-produces-all-deliverables-with-ai-disclosure",
+      "prompt": "IG 日常：咖啡馆窗边看笔记本电脑的工作抓拍，4:5，生活感，计划 2026-11-02 发布。台账见 demo/fixtures/ledger-compliant.md，候选见 demo/fixtures/candidate-compliant.json。",
+      "expected_output": "交付格式七节齐全：定调、轮换预检、场景与造型方案（抓拍 + 视线落点）、生图 prompt（正向 / 否定词带 / 禁用词 grep / 冲突审计）、QA 检查表、发布前动作、AI 标识与声明。",
+      "files": ["demo/fixtures/ledger-compliant.md", "demo/fixtures/candidate-compliant.json"],
+      "assertions": [
+        "Contains all sections of the Step 5 delivery format, including the AI disclosure section",
+        "The face-angle preset is 抓拍 (candid) and names a concrete gaze target",
+        "The negative band equals the fixed band in references/prompt-standards.md",
+        "The QA checklist covers face-angle 3, proportion 10, photorealism 11 and background 5 items, each marked pass/fail/needs full-size review",
+        "The AI disclosure section marks the image as AI-generated and names a disclosure method"
+      ]
+    }
+  ]
+}

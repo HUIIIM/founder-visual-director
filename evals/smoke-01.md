@@ -1,6 +1,7 @@
 # 冒烟评估 smoke-01：完整 dry-run
 
 > 评估对象：skill `founder-visual-director` v1.0.0
+> 隐私处理（2026-10-28）：人物外貌/年龄描述与本地照片文件名已替换为中性说明，其余记录未改。
 > 评估方式：真实执行（非纸面）。输入真实场景需求，按 SKILL.md 工作流跑完全程，
 > 输出三部分交付物，并把 QA 检查表实际走查一遍、轮换检查对照真实台账与实物。
 
@@ -22,9 +23,9 @@
 
 | 篇 | 场景大类 | 服装/造型 | 依据 |
 |---|---|---|---|
-| 第 7 篇 | 室内生活摆拍 | 黑T | 实物 post7-01-cover.jpg 目检（台账记当前版 v5-1 为"深夜书房"，未目检，按台账采信） |
-| 第 8 篇 | 室内书房（夜景） | 深色针织/眼镜 | 实物 post8-cover-v9.jpg 目检 |
-| 第 9 篇 | 户外运动（中央公园晨跑后拉伸） | 黑运动夹克 + 白T | 实物 xhs-post9-cover-v3.jpg 目检，制作时间 2026-10-03 |
+| 第 7 篇 | 室内生活摆拍 | 黑T | 实物 第 7 篇封面实物图 目检（台账记当前版 v5-1 为"深夜书房"，未目检，按台账采信） |
+| 第 8 篇 | 室内书房（夜景） | 深色针织/眼镜 | 实物 第 8 篇 v9 实物图 目检 |
+| 第 9 篇 | 户外运动（中央公园晨跑后拉伸） | 黑运动夹克 + 白T | 实物 第 9 篇 v3 实物图 目检，制作时间 2026-10-03 |
 
 ## 输出一：生图 prompt
 
@@ -36,8 +37,8 @@
 **正向 prompt**：
 
 ```
-Photorealistic full-scene photograph, 3:4 vertical, of an East Asian man in his 30s
-with short black hair and thin metal-frame glasses, doing a post-run shoulder stretch
+Photorealistic full-scene photograph, 3:4 vertical, of the founder [外貌与年龄描述已删除：现行「prompt 模板铁律」1 禁写面部/年龄特征，身份只靠 anchor 参考图；本记录早于该规则],
+doing a post-run shoulder stretch
 on a park path in the early morning. Deliberate posed portrait: body in a relaxed
 stretch pose, one arm across the chest held by the other hand, face turned toward
 camera, head-to-torso angle under 20 degrees, eyes looking directly into the lens.
@@ -64,7 +65,7 @@ oversized head, elongated neck, narrow shoulders, floating head, wide-angle dist
 **冲突审计结论**：无冲突（early morning + 85mm f/1.8 实拍机位无互斥；单主光源；
 摆拍预设与 "posed portrait" 逻辑一致，无抓拍/摆拍拼贴）。
 
-## 输出二：QA 检查表（走查对象：xhs-post9-cover-v3.jpg，同场景现存图）
+## 输出二：QA 检查表（走查对象：第 9 篇 v3 实物图，同场景现存图）
 
 > 说明：走查在可视分辨率下进行；凡缩略图不可辨的项记"需 100% 复核"，不硬判 pass。
 
@@ -133,7 +134,7 @@ oversized head, elongated neck, narrow shoulders, floating head, wide-angle dist
 
 **结论：违规。**
 
-- 证据：第 9 篇 v3（`xhs-post9-cover-v3.jpg`，
+- 证据：第 9 篇 v3（`第 9 篇 v3 实物图`，
   2026-10-03 制作）已占用"户外运动 / 城市晨跑后拉伸"场景大类；第 10 篇与第 9 篇相邻，
   同场景大类重复违反"相邻 3 篇不重复"；且同场景 14 天内重复违反冷却规则。
 - 处置建议：更换场景大类。A 级替代候选（避开近三篇已占用的室内生活摆拍 / 室内书房 / 户外运动）：
@@ -149,13 +150,13 @@ oversized head, elongated neck, narrow shoulders, floating head, wide-angle dist
 |---|---|---|
 | 00:42 | 定位内容源 4 份（视觉规范 v1.6 / 真实感标准 v1.2–v1.3 / 资产策划案 / 大师计划 v1.1 + 脸角度亲研笔记） | 4 份齐 |
 | 00:43 | 查近三篇实况：本地实物文件 + used-visual-ledger.md + 既有记录交叉 | 发现台账滞后（第 8 篇 v9、第 9 篇未登记） |
-| 00:43 | 目检第 7 篇封面（post7-01-cover.jpg）、第 9 篇 v3（xhs-post9-cover-v3.jpg）、第 8 篇 v9（post8-cover-v9.jpg） | 三篇场景大类确认 |
+| 00:43 | 目检第 7 篇封面（第 7 篇封面实物图）、第 9 篇 v3（第 9 篇 v3 实物图）、第 8 篇 v9（第 8 篇 v9 实物图） | 三篇场景大类确认 |
 | 00:44 | 按 skill Step 2 写脸角度预设（摆拍，视线落点 = 镜头） | 完成 |
 | 00:44 | 按 skill Step 3 写正向 prompt + 固定否定词带 | 完成 |
 | 00:44 | 禁用词 grep（首次：全串扫描，含否定词带） | 误报 `perfect skin`——固定否定词带本就含该词 |
 | 00:44 | 修正：grep 范围限定为正向 prompt；强制短语 / 否定词带逐项核对 | 正向零残留；强制短语 4/4；否定词带 10/10 |
 | 00:44 | 冲突审计（人工四项） | 无冲突 |
-| 00:45 | QA 检查表走查 xhs-post9-cover-v3.jpg（脸角度 3 + 比例 10 + 真实感 11 + 背景 5 = 29 项） | 1 个实质疑问（光源一致性）→ 按纪律打回 100% 复核 |
+| 00:45 | QA 检查表走查 第 9 篇 v3 实物图（脸角度 3 + 比例 10 + 真实感 11 + 背景 5 = 29 项） | 1 个实质疑问（光源一致性）→ 按纪律打回 100% 复核 |
 | 00:45 | 轮换检查：场景大类判定 + 相邻三篇 + 14 天规则 | **违规**：与第 9 篇 v3 同场景大类 |
 | 00:45 | 形成处置建议（3 个 A 级替代场景 + 排期提醒 + prompt 标注待确认） | 完成 |
 
