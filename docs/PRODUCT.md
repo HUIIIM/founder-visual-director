@@ -1,6 +1,6 @@
 # founder-visual-director — 产品一页纸
 
-> 状态：active（early）· 版本：1.1.0（SKILL.md metadata，未打 tag）· 更新：2026-10-28
+> 状态：active（early）· 版本：1.1.0（2026-10-30 发布，标签 v1.1.0，附 SBOM 与 SLSA 来源证明）· 更新：2026-10-30
 > 所属：[vertciti](https://vertciti.com) — 一家公司，一个人生。
 
 ## 一句话

@@ -1,0 +1,73 @@
+# Release on a version tag: source tarball, CycloneDX SBOM, SHA256SUMS and SLSA build provenance.
+# vertciti SOTA VER-4 (reproducible, SBOM, signed; rollback = redeploy the previous tag). See docs/RELEASING.md.
+name: Release
+on:
+  push:
+    tags: ["v*.*.*"]
+permissions:
+  contents: read
+jobs:
+  build:
+    name: build and publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # create the GitHub release and upload assets
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+      - name: Tag must match SKILL.md version and have a CHANGELOG entry
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          declared="$(sed -n 's/^  version: "\(.*\)"$/\1/p' SKILL.md)"
+          if [ "$version" != "$declared" ]; then
+            echo "::error::tag $TAG does not match SKILL.md metadata.version $declared"; exit 1
+          fi
+          grep -q "^## \[$version\]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no [$version] section"; exit 1; }
+      - name: Tests before release
+        run: |
+          python -m unittest discover -s tests
+          bash demo/eval.sh
+      - name: Build artifacts
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          mkdir dist
+          git archive --format=tar.gz --prefix="founder-visual-director-$version/" \
+            -o "dist/founder-visual-director-$version.tar.gz" "$TAG"
+          python scripts/make_sbom.py "$version" "dist/founder-visual-director-$version.cdx.json"
+          (cd dist && sha256sum -- * > SHA256SUMS)
+          awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {f=1; next} f && /^## / {exit} f' CHANGELOG.md > release-notes.md
+      - name: Hashes for provenance
+        id: hash
+        run: |
+          cd dist
+          echo "hashes=$(sha256sum -- *.tar.gz *.cdx.json | base64 -w0)" >> "$GITHUB_OUTPUT"
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" dist/* --verify-tag --title "$TAG" --notes-file release-notes.md
+
+  provenance:
+    name: SLSA provenance
+    needs: [build]
+    permissions:
+      actions: read # read the workflow run
+      id-token: write # sign the provenance (Sigstore)
+      contents: write # upload the .intoto.jsonl to the release
+    # Reusable SLSA workflows must be referenced by tag, not SHA, so their identity can be verified.
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: ${{ needs.build.outputs.hashes }}
+      upload-assets: true
