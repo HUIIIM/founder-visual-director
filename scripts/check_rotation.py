@@ -72,6 +72,13 @@ def _d(value):
         return None
 
 
+def _shown(value):
+    """报告里展示调用方提供的值：单行化并加「」，使其无法伪造「- 结论：」等报告行（#23 第 2 项）。"""
+    if value is None:
+        return "（缺）"
+    return "「" + re.sub(r"\s+", " ", str(value)).strip() + "」"
+
+
 def _check_line(name, hits, unknown):
     if hits:
         return f"{name}：违规 " + "；".join(hits)
@@ -258,20 +265,20 @@ def run(ledger_path, candidate):
     result = evaluate(entries, candidate, rules, defect_count=len(problems))
     c = candidate if isinstance(candidate, dict) else {}
     lines.append("- 候选：{} / {} / {} / 资产 {}（{} 级）".format(
-        c.get("platform"), c.get("date"), c.get("scene_category"), c.get("asset_id"), c.get("asset_grade")))
+        *(_shown(c.get(k)) for k in ("platform", "date", "scene_category", "asset_id", "asset_grade"))))
     lines.append(f"- 台账条目：共 {len(entries)} 条，字段缺陷 {len(problems)} 处")
     for p in problems:
         lines.append(f"- 台账缺陷：{p}")
     lines.append("")
     for line in result["checks"]:
-        lines.append(f"- 检查·{line}")
+        lines.append("- 检查·" + re.sub(r"\s+", " ", line))
     for n in result["notes"]:
-        lines.append(f"- 不确定性：{n}")
+        lines.append("- 不确定性：" + re.sub(r"\s+", " ", n))
     if result["findings"]:
         lines.append("")
         lines.append("## 违规明细")
         for f in result["findings"]:
-            lines.append("- " + f)
+            lines.append("- " + re.sub(r"\s+", " ", f))
         lines.append("- 处置建议：换场景大类 / 换服装造型 / 推迟到冷却期满后，并按 SKILL.md Step 1 "
                      "在 prompt 上标注「待场景确认」。")
     lines.append("")

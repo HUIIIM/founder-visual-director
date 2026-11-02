@@ -64,7 +64,7 @@ done
 for s in "脸角度三规则" "人体比例十项" "真实感" "背景专项"; do
   grep -q "$s" "$OUTDIR/checklist.md" || note "checklist.md 缺小节：$s"
 done
-if grep -q "结论：违规" "$OUTDIR/rotation.md"; then note "轮换结论为违规"; fi
+if grep -q "^- 结论：违规" "$OUTDIR/rotation.md"; then note "轮换结论为违规"; fi
 
 # 回归夹具（仅默认模式）：以下输入必须被 run.py 拒绝，否则判定链失效
 if [ -z "$TMPD" ]; then
@@ -95,7 +95,7 @@ cat > "$FX/cand-violation.json" <<'EOF'
 EOF
 FVD_DEMO_OUT="$FX/out-v" FVD_LEDGER_PATH="$FIXP/ledger-violation.md" python3 "$DEMO/run.py" "$FX/cand-violation.json" > "$FX/v.log" 2>&1
 vrc=$?
-grep -q "结论：违规" "$FX/out-v/rotation.md" || note "P1 轮换违规例：rotation.md 结论非违规"
+grep -q "^- 结论：违规" "$FX/out-v/rotation.md" || note "P1 轮换违规例：rotation.md 结论非违规"
 # 独立评估 #16 P1-1：轮换违规必须进入终判与退出码，且不得给出拟登记条目
 [ $vrc -eq 3 ] || note "#16 P1-1 轮换违规例：run.py 退出码应为 3，实得 $vrc"
 grep -q "^## 终判：打回" "$FX/out-v/prompt.txt" || note "#16 P1-1 轮换违规例：prompt.txt 终判不是打回"
@@ -117,12 +117,12 @@ cat > "$FX/cand-compliant.json" <<'EOF'
 EOF
 FVD_DEMO_OUT="$FX/out-c" FVD_LEDGER_PATH="$FIXP/ledger-compliant.md" python3 "$DEMO/run.py" "$FX/cand-compliant.json" > "$FX/c.log" 2>&1
 crc=$?
-grep -q "结论：通过" "$FX/out-c/rotation.md" || note "P1 轮换合规例：rotation.md 结论非通过"
+grep -q "^- 结论：通过" "$FX/out-c/rotation.md" || note "P1 轮换合规例：rotation.md 结论非通过"
 [ $crc -eq 0 ] || note "P1 轮换合规例：run.py 退出码应为 0，实得 $crc"
 # 台账缺失必须降级为无法判定，绝不冒充通过
 FVD_DEMO_OUT="$FX/out-m" FVD_LEDGER_PATH="$FX/no-ledger.md" python3 "$DEMO/run.py" "$FX/cand-compliant.json" > "$FX/m.log" 2>&1
 mrc=$?
-grep -q "结论：无法判定" "$FX/out-m/rotation.md" || note "P1 台账缺失例：未降级为无法判定"
+grep -q "^- 结论：无法判定" "$FX/out-m/rotation.md" || note "P1 台账缺失例：未降级为无法判定"
 [ $mrc -eq 5 ] || note "#16 P1-1 台账缺失例：run.py 退出码应为 5（条件通过），实得 $mrc"
 grep -q "^## 终判：条件通过" "$FX/out-m/prompt.txt" || note "#16 P1-1 台账缺失例：终判不是条件通过"
 # 品牌锁：违规夹具必须被拒、合规夹具必须通过
