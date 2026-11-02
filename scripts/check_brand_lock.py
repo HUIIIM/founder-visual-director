@@ -10,14 +10,17 @@
   它们出现在交付物中即为品牌锁偏离。
 
 检查对象（prompt / 交付物文本文件，可多个）：
-1. 手写色值：#RGB / #RRGGBB 与 rgb()/rgba() 字面量，不在允许色值集内 -> 违规逐条列出；
+1. 手写色值：#RGB / #RGBA / #RRGGBB / #RRGGBBAA、rgb()/rgba()（逗号或空格语法）、hsl()/hsla()
+   换算后不在允许色值集内 -> 违规；hwb()/lab()/lch()/oklab()/oklch()/color() 与 CSS 颜色属性里的
+   具名颜色无法核对色板 -> 一律违规；
 2. 字体：font-family 声明中的非通用族不在允许字体集内，或观察名单字体在文本任意位置出现 -> 违规；
 3. 字标：vertciti 的大小写变体（Vertciti / VERTCITI / VertCiti 等）或 vert-citi / vert citi 写法 -> 违规。
-退出码：0 通过 / 1 违规 / 2 bundle 读取失败或用法错误。
+退出码：0 通过 / 1 违规 / 2 bundle 或待检文件不可读（无法判定）、用法错误 / 3 内部错误。
 
 用法：python3 scripts/check_brand_lock.py <文本文件> [更多文件...] [--bundle <bundle.json>]
 """
 import argparse
+import colorsys
 import json
 import os
 import re
@@ -84,27 +87,95 @@ def rgb_to_hex(r, g, b):
     return f"#{int(r):02X}{int(g):02X}{int(b):02X}"
 
 
+HEX_RE = re.compile(r"#([0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{3})\b")
+NUM = r"([-+]?\d*\.?\d+)(%|deg)?"
+SEP = r"\s*[,\s]\s*"
+RGB_RE = re.compile(r"rgba?\(\s*" + NUM + SEP + NUM + SEP + NUM, re.IGNORECASE)
+HSL_RE = re.compile(r"hsla?\(\s*" + NUM + SEP + NUM + SEP + NUM, re.IGNORECASE)
+OTHER_COLOR_FN_RE = re.compile(r"\b(hwb|lab|lch|oklab|oklch|color)\(", re.IGNORECASE)
+# CSS 颜色属性里的具名颜色（自然语言里的 "red jacket" 不算，只看属性上下文）
+NAMED_IN_PROPERTY_RE = re.compile(
+    r"\b(?:color|background(?:-color)?|fill|stroke|border(?:-[a-z]+)?-color|outline-color)\s*:\s*([A-Za-z]+)\b",
+    re.IGNORECASE)
+# CSS Color Module 具名颜色（148 个）；只有属性上下文里出现这些词才算手写色值
+_CSS_NAMED_COLOR_WORDS = """
+aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown
+burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue
+darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange
+darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise
+darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia
+gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo
+ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan
+lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue
+lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon
+mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue
+mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin
+navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen
+paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rebeccapurple red
+rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue
+slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white
+whitesmoke yellow yellowgreen
+"""
+CSS_NAMED_COLORS = frozenset(_CSS_NAMED_COLOR_WORDS.split())
+
+
+def _channel(value, unit, scale):
+    v = float(value)
+    return max(0.0, min(255.0, v * 255.0 / 100.0)) if unit == "%" else max(0.0, min(255.0, v * scale))
+
+
+def hex_rgb_part(token):
+    """#RGB / #RGBA / #RRGGBB / #RRGGBBAA -> 归一后的 #RRGGBB（alpha 不改变是否属于色板）。"""
+    v = token.lstrip("#")
+    if len(v) in (3, 4):
+        v = "".join(ch * 2 for ch in v[:3])
+    return "#" + v[:6].upper()
+
+
+def colors_in_line(line):
+    """返回 [(原文, 归一 hex 或 None)]；None 表示该写法无法换算到色板（一律按偏离处理）。"""
+    found = []
+    for m in HEX_RE.finditer(line):
+        found.append((m.group(0), hex_rgb_part(m.group(0))))
+    for m in RGB_RE.finditer(line):
+        r, g, b = (_channel(m.group(i), m.group(i + 1), 1.0) for i in (1, 3, 5))
+        found.append((m.group(0) + ")", rgb_to_hex(round(r), round(g), round(b))))
+    for m in HSL_RE.finditer(line):
+        h = float(m.group(1)) % 360 / 360.0
+        sat = float(m.group(3)) / (100.0 if m.group(4) == "%" or float(m.group(3)) > 1 else 1.0)
+        lig = float(m.group(5)) / (100.0 if m.group(6) == "%" or float(m.group(5)) > 1 else 1.0)
+        r, g, b = colorsys.hls_to_rgb(h, max(0.0, min(1.0, lig)), max(0.0, min(1.0, sat)))
+        found.append((m.group(0) + ")", rgb_to_hex(round(r * 255), round(g * 255), round(b * 255))))
+    for m in OTHER_COLOR_FN_RE.finditer(line):
+        found.append((m.group(0) + "…)", None))
+    for m in NAMED_IN_PROPERTY_RE.finditer(line):
+        if m.group(1).lower() in CSS_NAMED_COLORS:
+            found.append((m.group(0), None))
+    return found
+
+
+class UnreadableFile(Exception):
+    """待检文件无法读取：结果是「无法判定」，不是「违规」也不是「通过」。"""
+
+
 def check_file(path, colors, fonts, wordmark, watchlist):
     """返回违规字符串列表（每条含 文件:行 与命中内容）。"""
     violations = []
     try:
         with open(path, encoding="utf-8") as f:
             lines = f.read().splitlines()
-    except OSError as exc:
-        return [f"{path}：文件不可读（{exc}）"]
+    except (OSError, UnicodeDecodeError) as exc:
+        raise UnreadableFile(f"{path}：文件不可读或不是 UTF-8 文本（{exc.__class__.__name__}）") from exc
     for lineno, line in enumerate(lines, 1):
         where = f"{path}:{lineno}"
-        # 1. 手写色值（hex）
-        for m in re.finditer(r"#[0-9A-Fa-f]{6}\b|#[0-9A-Fa-f]{3}\b", line):
-            value = normalize_hex(m.group(0))
-            if value not in colors:
-                violations.append(f"{where} 手写色值 {m.group(0)} 不在品牌锁色板内"
+        # 1. 手写色值：hex（3/4/6/8 位）、rgb()/rgba()（逗号或空格语法、百分比）、hsl()/hsla()，
+        #    其他颜色函数与 CSS 属性里的具名颜色无法核对色板，一律按偏离处理（独立评估 #16 P2-3）
+        for raw, value in colors_in_line(line):
+            if value is None:
+                violations.append(f"{where} 手写色值 {raw} 无法核对品牌锁色板（请改用 bundle 内的 hex 色值）")
+            elif value not in colors:
+                violations.append(f"{where} 手写色值 {raw}（={value}）不在品牌锁色板内"
                                   f"（bundle 允许 {len(colors)} 个色值）")
-        # 1b. 手写色值（rgb/rgba）
-        for m in re.finditer(r"rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})", line):
-            value = rgb_to_hex(m.group(1), m.group(2), m.group(3))
-            if value not in colors:
-                violations.append("{} 手写色值 {}（={}）不在品牌锁色板内".format(where, m.group(0) + ")", value))
         # 2a. font-family 声明
         for m in re.finditer(r"font-family\s*:\s*([^;}{]+)", line, re.IGNORECASE):
             for fam in m.group(1).split(","):
@@ -140,7 +211,11 @@ def main(argv=None):
           f"字标 {wordmark!r} / 观察名单 {len(watchlist)}）")
     all_violations = []
     for path in args.files:
-        all_violations.extend(check_file(path, colors, fonts, wordmark, watchlist))
+        try:
+            all_violations.extend(check_file(path, colors, fonts, wordmark, watchlist))
+        except UnreadableFile as exc:
+            print(f"品牌锁校验：无法判定 —— {exc}")
+            return 2
     if all_violations:
         print(f"品牌锁校验：违规 {len(all_violations)} 条")
         for v in all_violations:
@@ -153,4 +228,8 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception as exc:  # noqa: BLE001 -- 内部错误不得冒充「违规」(1)
+        print(f"内部错误：{exc.__class__.__name__}: {exc}", file=sys.stderr)
+        sys.exit(3)

@@ -8,8 +8,30 @@ Versions follow git tags from v1.1.0 on (releases carry an SBOM, Sigstore signat
 
 ## [1.1.0] - 2026-10-30
 
-### Added
+### Added (publishing)
 - 发布前动作增加替代文本（alt text）要求，QA 检查表增加对应勾选项；README 写明 OpenSSF Scorecard 公开分（2026-10-30 为 6.9 / 10）及未达项。 / Alt-text step before publishing; README states the public Scorecard score.
+
+### Fixed
+- 轮换结论进入终判（独立评估 #16 P1-1）：`demo/run.py` 先跑轮换预检再写交付物；轮换违规 = 打回（退出码 3，不给台账条目）；无法判定 / 条件通过 = 终判「条件通过」（新退出码 5，只给「待复核」条目）。此前违规台账照样「终判：通过」、退出码 0。 / The rotation verdict now drives the final verdict and exit code.
+- 缺无关字段不再把台账条目踢出轮换比对（#16 P1-2）：每项检查使用具备该项所需字段的全部条目，缺 `model_id`、AI 声明等字段只记不确定性；台账有条目但没有一条可用时为「无法判定」。 / Entries missing unrelated fields still count in rotation checks.
+- 平台枚举与别名归一（#16 P1-3）：`platform` 只能是 小红书 / IG / LinkedIn（`XHS`、`Instagram` 等别名归一）；不再从 `theme_platform` 推断平台，非法或缺失即「无法判定」。 / Platform enum with aliases; no fallback to the theme string.
+- 「条件通过」不再与「通过」同码（#16 P2-1）：`check_rotation.py` 条件通过退出码 4，候选缺字段时逐项写「无法判定（缺 …）」。 / Conditional pass has its own exit code; affected checks say so.
+- 校验脚本崩溃不再冒充「违规」（#16 P2-2）：非对象条目/候选、非 UTF-8 文件按「无法判定」处理；未预期异常走独立退出码（rotation 5，品牌锁/面部 3）。 / Crashes no longer exit as "violation".
+- 品牌锁色值检查补全（#16 P2-3）：4/8 位 hex、空格语法与百分比 rgb()、hsl()、hwb/lab/lch/oklab/oklch/color() 与 CSS 属性里的具名颜色均纳入检查。 / Brand-lock colour bypasses closed.
+- `uses_standard_portrait` 必须是 JSON 布尔值（#16 P2-4），字符串 "true"/"false" 以退出码 2 拒绝。 / Portrait flag must be a boolean.
+- gitleaks 检出不再把 job token 留在 `.git/config`（#16 P2-6）。 / gitleaks checkout drops persisted credentials.
+
+### Added (review #16)
+- `tests/test_checkers.py`：轮换 / 台账 / 品牌锁 / 面部一致性的表驱动单测，含 #16 全部复现（#16 P2-5）；`demo/eval.sh` 新增退出码断言与 P1-1/P1-2/P1-3 回归夹具。 / Unit tests for the checkers.
+- 台账格式：平台枚举与别名、可选 `model_consent_status`（expired / revoked = 违规）；SECURITY.md 写明肖像与授权数据在仓库外但属安全范围（#16 P2-8）。 / Platform enum, consent field, SECURITY scope.
+
+- demo 输入校验：非 JSON 对象 / JSON 损坏 / 必填项非字符串一律以退出码 2 拒绝（此前抛 traceback 或放行）。 / Bad input is refused with exit 2 instead of a traceback.
+- 输入字段单行化并去掉 `#`，`scene` 里的换行不能再伪造「## 终判：通过」等段落。 / Inputs can no longer forge report sections.
+- 场景文字写明白底标准照时直接打回（事故级，不依赖台账或调用者另设 `uses_standard_portrait`）；写明白底/棚拍且未给大类时按「白底棚拍」判定。 / White-background portrait in the scene text is rejected on its own.
+- 样例输出不再带本机绝对台账路径、`input.json` 固定日期，`demo/output/` 可在任何机器上逐字复现；`eval.sh` 先比对再重写样例。 / Sample output is reproducible.
+- SKILL.md / prompt-standards.md「按年龄写皮肤」与「prompt 模板铁律」1 冲突、rotation-rules.md 白底三禁第 3 条歧义；SKILL.md「管线 403」改为如实说明由外部管线执行。 / Rule contradictions resolved.
+
+### Added
 - 发布流程：`release.yml` 在推送 `v*` 标签时先跑与 PR CI 相同的门禁（ruff、单元测试、skill 包校验、demo eval、样例可复现），再生成源码包、可复现的 CycloneDX SBOM（`scripts/make_sbom.py`，序列号取 UUIDv5、时间取标签提交时间）与 SHA256SUMS，逐个用 Sigstore 无密钥签名（`*.sigstore.json`），并附 GitHub 构建来源证明；所有 action 按提交 SHA 固定。`docs/RELEASING.md` 写明发版、校验与回滚步骤。 / Release workflow: CI-equivalent gate, reproducible SBOM, Sigstore signatures and build provenance; release, verify and rollback guide.
 - `demo.yml` CI：每个 PR 跑 `demo/eval.sh`、`ruff check`（`requirements-dev.txt` 按哈希安装）并确认样例未被改写；`demo/` 与 `scripts/` 清零 ruff 存量问题（输出逐字不变）；`SECURITY.md`、`docs/PRIVACY.md`；`.gitignore` 忽略仓根台账。 / Demo CI, SECURITY.md, PRIVACY.md.
 - 台账真实现（issue #6 P1 ③）：`references/ledger-format.md` 台账正式格式 v1.0（字段沿用 schema 草案 v0.1，定机器可读载体与结构化参考图字段 `references`，附备份说明）；`scripts/check_rotation.py` 轮换预检真读台账（相邻 3 篇 / 14 天同大类 / 冷却期 / S 级月度上限 / 白底三禁，规则数值运行时直读 rotation-rules.md），台账缺失/不可解析只出「无法判定（降级）」不冒充通过；`scripts/ledger_lib.py` 共用解析与字段校验；`demo/run.py` 轮换段接线真读判定（原仅查台账存在性）；样例台账与候选夹具入 `demo/fixtures/`，`demo/eval.sh` 纳为回归断言。 / Real ledger: formal ledger format v1.0, rotation precheck that actually reads the ledger, shared parser/validator, fixtures wired into eval.

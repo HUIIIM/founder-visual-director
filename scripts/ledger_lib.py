@@ -21,6 +21,15 @@ GRADES = ("S", "A", "B")
 STATUSES = ("已发布", "待发", "已退役")
 ROLES = ("anchor", "style", "layout", "negative")
 DISCLOSURE_METHODS = ("platform_declaration", "c2pa", "caption", "none")
+# 平台枚举（references/ledger-format.md「平台枚举」）：台账与候选一律归一到这三个值再比较，
+# 拼写变体不能再让轮换检查静默落空。
+PLATFORMS = ("小红书", "IG", "LinkedIn")
+PLATFORM_ALIASES = {
+    "小红书": "小红书", "xiaohongshu": "小红书", "xhs": "小红书", "red": "小红书", "rednote": "小红书",
+    "ig": "IG", "instagram": "IG",
+    "linkedin": "LinkedIn",
+}
+MODEL_CONSENT_STATUSES = ("active", "expired", "revoked")
 
 # 条目必填字段（格式 v1.0）；date_published 仅 status=已发布 时必填，单列处理。
 REQUIRED_FIELDS = (
@@ -28,6 +37,13 @@ REQUIRED_FIELDS = (
     "outfit", "styling", "asset_grade", "asset_id", "model_id",
     "status", "ai_generated", "ai_disclosure_method",
 )
+
+
+def normalize_platform(value):
+    """归一平台名：返回 PLATFORMS 之一；无法识别返回 None。"""
+    if not isinstance(value, str):
+        return None
+    return PLATFORM_ALIASES.get(value.strip().lower())
 
 
 def _parse_date(value):
@@ -74,8 +90,11 @@ def load_ledger(path):
     """
     if not os.path.exists(path):
         return None, [], "台账文件不存在：" + str(path)
-    with open(path, encoding="utf-8") as f:
-        text = f.read()
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    except (OSError, UnicodeDecodeError) as exc:
+        return None, [], f"台账文件不可读（{exc.__class__.__name__}）：{path}"
     entries, error = extract_entries_text(text)
     if error:
         return None, [], error
@@ -110,6 +129,11 @@ def validate_entry(entry, idx):
     grade = entry.get("asset_grade")
     if grade is not None and grade not in GRADES:
         problems.append(f"{tag} 的 asset_grade 非法：{grade!r}（应为 S/A/B）")
+    if entry.get("platform") is not None and normalize_platform(entry.get("platform")) is None:
+        problems.append("{} 的 platform 非法：{!r}（应为 {}）".format(tag, entry.get("platform"), " / ".join(PLATFORMS)))
+    consent = entry.get("model_consent_status")
+    if consent is not None and consent not in MODEL_CONSENT_STATUSES:
+        problems.append(f"{tag} 的 model_consent_status 非法：{consent!r}")
     if entry.get("ai_generated") is True:
         if not entry.get("ai_disclosure_text"):
             problems.append(f"{tag} ai_generated=true 但缺 ai_disclosure_text")
@@ -134,6 +158,8 @@ def validate_entry(entry, idx):
 def validate_candidate(candidate):
     """候选（本次待检交付）字段校验，返回缺陷列表。
     候选字段见 ledger-format.md「候选字段」节。"""
+    if not isinstance(candidate, dict):
+        return ["候选不是 JSON 对象"]
     problems = []
     for field in ("platform", "date", "scene_category", "outfit", "styling",
                   "asset_id", "asset_grade"):
@@ -145,4 +171,12 @@ def validate_candidate(candidate):
     grade = candidate.get("asset_grade")
     if grade is not None and grade not in GRADES:
         problems.append(f"候选 asset_grade 非法：{grade!r}")
+    if candidate.get("platform") is not None and normalize_platform(candidate.get("platform")) is None:
+        problems.append("候选 platform 非法：{!r}（应为 {}）".format(candidate.get("platform"), " / ".join(PLATFORMS)))
+    portrait = candidate.get("uses_standard_portrait")
+    if portrait is not None and not isinstance(portrait, bool):
+        problems.append(f"候选 uses_standard_portrait 必须是 JSON 布尔值，实得 {portrait!r}")
+    consent = candidate.get("model_consent_status")
+    if consent is not None and consent not in MODEL_CONSENT_STATUSES:
+        problems.append(f"候选 model_consent_status 非法：{consent!r}")
     return problems

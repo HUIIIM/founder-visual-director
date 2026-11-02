@@ -5,12 +5,14 @@ on:
   pull_request:
 permissions:
   contents: read
-  pull-requests: write
 jobs:
   review:
     name: Dependency review
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write # only for comment-summary-in-pr; scoped to this job (SEC-6)
     steps:
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
