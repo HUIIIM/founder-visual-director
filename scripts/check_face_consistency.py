@@ -17,7 +17,7 @@
 若存在则按同一方式校验产物文件存在性与哈希；不存在时仅提示「未启用」。
 授权/版本面（model_id 停用等）不在本脚本范围，登记字段校验由 ledger_lib 承担。
 
-退出码：0 通过 / 1 违规 / 2 台账不可读（降级，无法判定）。
+退出码：0 通过 / 1 违规 / 2 台账不可读或无对象条目（降级，无法判定）/ 3 内部错误。
 用法：python3 scripts/check_face_consistency.py <台账.md|.json> [--all]
 （默认只查 已发布/待发 条目；--all 连同已退役条目一并查。）
 """
@@ -108,9 +108,15 @@ def main(argv=None):
         print(f"面部一致性校验：无法判定（降级）—— {fatal}")
         return 2
     base_dir = os.path.dirname(os.path.abspath(args.ledger))
+    non_objects = sum(1 for e in entries if not isinstance(e, dict))
     targets = [e for e in entries
-               if args.all or e.get("status") in ("已发布", "待发")]
+               if isinstance(e, dict) and (args.all or e.get("status") in ("已发布", "待发"))]
     all_violations, all_notes = [], []
+    if non_objects:
+        all_notes.append(f"台账有 {non_objects} 个条目不是 JSON 对象，未参与核验")
+    if entries and not targets and non_objects == len(entries):
+        print(f"面部一致性校验：无法判定（降级）—— 台账 {args.ledger} 没有任何对象条目")
+        return 2
     for p in problems:
         all_notes.append(f"台账字段缺陷（ledger_lib）：{p}")
     for entry in targets:
@@ -131,4 +137,8 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception as exc:  # noqa: BLE001 -- 内部错误不得冒充「违规」(1)
+        print(f"内部错误：{exc.__class__.__name__}: {exc}", file=sys.stderr)
+        sys.exit(3)
