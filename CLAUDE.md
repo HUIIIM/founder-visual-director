@@ -1,8 +1,10 @@
 # founder-visual-director
 
-A published skill package: founder visual direction — benchmark-first
-visual/layout design discipline for founder-facing deliverables. Public,
-bilingual editions.
+A published agent skill (Agent Skills format, MIT): a scene brief for
+AI-generated founder photography in, three deliverables out — an executable
+image prompt, a full-size photorealism QA checklist, and a rotation-compliance
+verdict. The skill is defined in `SKILL.md`; rules live in `references/`,
+checkers in `scripts/`, the runnable demo in `demo/`, evals in `evals/`.
 
 ## How work happens here
 
@@ -14,11 +16,22 @@ bilingual editions.
 
 ## Working rules
 
-- Bilingual parity is a publish gate: SKILL.md / SKILL.zh.md and
-  README.md / README.zh.md ship together, sections aligned.
-- Design work in this repo follows its own doctrine: dissect at least six
-  real benchmark samples before laying out anything new; verify the
-  delivered file itself (page count, full render), not a screenshot of it.
+- Language: `README.md` is English; `SKILL.md`, `references/`, `demo/output/`
+  and `CHANGELOG.md` are 简体中文. There is no `SKILL.zh.md` / `README.zh.md`
+  and no bilingual-parity gate. If a translation is ever added, add the
+  parity rule in the same PR.
+- Before a PR, run what CI runs (`.github/workflows/tests.yml`):
+  `python -m unittest discover -s tests -v` and
+  `python scripts/validate_skill.py`; demo output is checked by
+  `bash demo/eval.sh`.
+- Skill content obeys its own red lines (`SKILL.md` § 红线): QA must pass
+  before publishing, the white-background standard headshot is never content
+  art, published images are retired for good, no same outfit/styling in
+  adjacent posts.
+- A version change updates `SKILL.md` `metadata.version`, `CHANGELOG.md` and
+  the `README.md` status row together.
+- Releases follow `docs/RELEASING.md`; a merged release PR is followed by its
+  version tag (see `LOOP.md`).
 
 
 ## 三自与能力跃升（董事长令 2026-11-01）
