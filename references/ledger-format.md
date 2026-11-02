@@ -22,7 +22,7 @@
 | 字段 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `ledger_id` | string | 是 | 条目唯一 ID（如 `xhs-2026-010`） |
-| `platform` | string | 是 | 平台（小红书 / IG / LinkedIn 等） |
+| `platform` | enum | 是 | 平台，取值见下方「平台枚举」 |
 | `post_no` | string | 是 | 篇号 / 发布序号 |
 | `date_made` | date | 是 | 制作日期 |
 | `date_published` | date | 状态=已发布时必填 | 发布日期；生效日期取制作/发布孰早 |
@@ -32,6 +32,7 @@
 | `asset_grade` | enum | 是 | S / A / B |
 | `asset_id` | string | 是 | 素材资产 ID（冷却期按此 ID 计算） |
 | `model_id` | string | 是 | 模特资产版本（如 `miao-v1`），无则填 `none` |
+| `model_consent_status` | enum | 否 | 模特资产授权状态：`active` / `expired` / `revoked`（授权过期或撤回即停用，见 docs/PRIVACY.md） |
 | `reference_roles` | string | 否 | 参考图角色摘要（人读，如 `anchor=path, style=path`） |
 | `status` | enum | 是 | 已发布 / 待发 / 已退役（轮换判定只计已发布+待发） |
 | `ai_generated` | bool | 是 | AI 标识组：是否为 AI 生成合成内容 |
@@ -47,6 +48,10 @@ v1.0 新增字段（补全机读所需，不改 v0.1 字段名）：
 | `output_file` | string | 否（预留） | **一图一记录候选的接口预留**：产物文件路径。与 `image_sha256` 成对出现时，校验工具按参考图同一方式验其存在性与哈希；本版不强制登记 |
 | `image_sha256` | string | 否（预留） | 同上，产物文件的 SHA-256 |
 
+### 平台枚举
+
+台账条目与候选的 `platform` 只能是 `小红书` / `IG` / `LinkedIn` 三者之一。比较前先归一（不区分大小写、去首尾空格），以下别名视为同一平台：`xiaohongshu`、`xhs`、`red`、`rednote` → `小红书`；`instagram` → `IG`。其他写法（含「小红书第 10 篇封面」这类主题串）一律视为非法：条目记字段缺陷，候选的轮换预检结论为「无法判定」。新增平台须先改本表与 `scripts/ledger_lib.py` 的 `PLATFORMS`。
+
 ## 3. 候选字段（轮换预检的待检对象）
 
 预检对象是「本次候选交付」，以 JSON 对象提供（`scripts/check_rotation.py --candidate`）：
@@ -56,7 +61,8 @@ v1.0 新增字段（补全机读所需，不改 v0.1 字段名）：
 | `platform` / `date` | string / date | 平台与候选日期（制作/计划发布孰早） |
 | `scene_category` / `outfit` / `styling` | string | 与条目同名同义 |
 | `asset_id` / `asset_grade` | string / enum | 候选拟用资产 |
-| `uses_standard_portrait` | bool | 是否使用白底标准照作内容配图（true = 事故级违规） |
+| `uses_standard_portrait` | bool | 是否使用白底标准照作内容配图（true = 事故级违规）；必须是 JSON 布尔值，字符串 "true" 会被拒绝 |
+| `model_consent_status` | enum | 可选；`expired` / `revoked` = 违规（授权失效的模特资产不得用于新内容） |
 
 ## 4. 机器校验（已实现）
 
@@ -72,8 +78,11 @@ v1.0 新增字段（补全机读所需，不改 v0.1 字段名）：
 
 - 台账缺失或不可解析：结论只能是「无法判定（降级）」，检查不执行，**不得输出「通过」**；
   按 SKILL.md 降级规则标注「台账待补」并留人工判定痕迹。
-- 条目字段有缺陷：缺陷条目逐条列出并排除出判定，结论上限为「条件通过」并标注不确定性。
-- 候选字段不全：受影响检查标注无法判定，结论上限为「条件通过」。
+- 条目字段有缺陷：缺陷逐条列出；每项检查仍使用具备该项所需字段的全部条目（缺与本项无关的字段，如 `model_id`、AI 声明字段，不会把条目剔除出轮换比对）；缺本项字段的条目逐条标注。有违规即「违规」，否则结论上限为「条件通过」。
+- 台账有条目但没有一条具备可归一的平台与生效日期：结论为「无法判定」。
+- 台账中没有候选平台的在用条目：标注不确定性，结论上限为「条件通过」（平台首发须人工确认）。
+- 候选字段不全：受影响检查逐项标注「无法判定（缺 …）」，结论上限为「条件通过」；候选缺 `platform` / `date` 或平台非法：「无法判定」。
+- `scripts/check_rotation.py` 退出码：0 通过 / 1 违规 / 2 无法判定 / 3 规则读取失败或用法错误 / 4 条件通过 / 5 内部错误。条件通过与通过的退出码不同，调用方不得把 4 当作 0。
 - 凡「已发布」的图永久退役，绝不二次使用（含裁剪、调色、跨平台复用）——此为登记纪律，
   由轮换预检的相邻/冷却检查与人工复核共同把守。
 

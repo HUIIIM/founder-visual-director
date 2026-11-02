@@ -11,10 +11,11 @@
 用法：python3 demo/run.py [input.json]（默认 demo/input.json）
 输入除契约四项外可带结构化候选字段（platform / post_no / date / scene_category /
 outfit / styling / asset_id / asset_grade / uses_standard_portrait），供轮换预检真读判定；
-date 缺省取当天。
+date 缺省取当天；platform 不从 theme_platform 推断（缺省即轮换无法判定）。
 输出目录：demo/output/，可用环境变量 FVD_DEMO_OUT 覆盖；
 台账路径：环境变量 FVD_LEDGER_PATH 或 skill 根目录 used-visual-ledger.md。
-退出码：0 通过 / 2 输入缺项 / 3 规则打回 / 4 规则读取失败。
+退出码：0 通过 / 2 输入缺项或非法 / 3 打回（prompt 规则或轮换违规）/ 4 规则读取失败 /
+5 条件通过（轮换预检无法判定或带不确定性：不得当作通过，须补台账或人工复核后才可发布）。
 """
 import json
 import os
@@ -103,6 +104,9 @@ def load_input(path):
     if not isinstance(inp, dict):
         print("输入必须是 JSON 对象，按契约应先问调用者")
         return None
+    if "uses_standard_portrait" in inp and not isinstance(inp["uses_standard_portrait"], bool):
+        print("uses_standard_portrait 必须是 JSON 布尔值 true/false，按契约应先问调用者")
+        return None
     return {k: clean(v) if isinstance(v, str) else v for k, v in inp.items()}
 
 
@@ -176,8 +180,45 @@ def main():
         reasons.append("B 级严审情形：" + ",".join(b_hits) + "（转 B 级流程，本 demo 不放行）")
     if white_hits:
         reasons.append("白底标准照作内容配图：" + ",".join(white_hits) + "（事故级，白底三禁 1）")
+    # 输出三：轮换合规检查（真读台账判定：scripts/check_rotation.py；
+    # 台账缺失/不可解析时按降级规则输出「无法判定」，绝不假装通过）
+    ledger = os.environ.get("FVD_LEDGER_PATH") or os.path.join(SKILL, "used-visual-ledger.md")
+    candidate = {
+        "platform": inp.get("platform"),
+        "date": inp.get("date") or _date.today().isoformat(),
+        "scene_category": inp.get("scene_category"),
+        "outfit": inp.get("outfit"),
+        "styling": inp.get("styling"),
+        "asset_id": inp.get("asset_id"),
+        "asset_grade": inp.get("asset_grade"),
+        "uses_standard_portrait": inp.get("uses_standard_portrait", False),
+    }
+    # 场景文字本身写明白底标准照/白底棚拍时，不靠调用者另设标志才拦（白底三禁）
+    if white_hits:
+        candidate["uses_standard_portrait"] = True
+    if not candidate["scene_category"] and any(w in scene for w in WHITE_STUDIO_WORDS):
+        candidate["scene_category"] = "白底棚拍"
+    rot_code, rot_report = check_rotation.run(ledger, candidate)
+    # 仓内台账路径按相对路径展示：样例输出不带本机绝对路径，可在任何机器上复现
+    ledger_abs = os.path.abspath(ledger)
+    if ledger_abs.startswith(SKILL + os.sep):
+        rot_report = rot_report.replace(ledger_abs, os.path.relpath(ledger_abs, SKILL))
+    rot_verdict = next((ln.split("结论：", 1)[1] for ln in rot_report.splitlines() if "结论：" in ln), "无法判定")
+    if rot_code == 3:
+        print("规则读取失败：轮换预检规则不完整，拒绝放行")
+        return 4
+
+    # 终判 = prompt 规则 + 轮换预检（独立评估 #16 P1-1：轮换结论不得被丢弃）
+    if rot_code == 1:
+        reasons.append("轮换违规（见 rotation.md 违规明细；prompt 待场景确认，不可投产）")
     rejected = bool(reasons)
-    verdict = "打回（" + "；".join(reasons) + "）" if rejected else "通过"
+    conditional = not rejected and rot_code != 0
+    if rejected:
+        verdict = "打回（" + "；".join(reasons) + "）"
+    elif conditional:
+        verdict = f"条件通过（轮换预检：{rot_verdict}；须补台账或人工复核后才可发布，不得当作通过）"
+    else:
+        verdict = "通过"
 
     # AI 标识与声明（SKILL.md Step 5 第七节；字段与台账正式格式 v1.0 同名，references/ledger-format.md）
     method = "c2pa + platform_declaration" if "LinkedIn" in theme else "platform_declaration"
@@ -209,6 +250,9 @@ def main():
 
 ## 白底禁令检查
 {'命中: ' + ','.join(white_hits) + ' -> 打回（事故级）' if white_hits else '未使用白底标准照 -> 通过'}
+
+## 轮换预检结论
+{rot_verdict}（详见 rotation.md）{' -> prompt 待场景确认，不可投产' if rot_code == 1 else ''}
 
 {disclosure}
 
@@ -246,29 +290,6 @@ def main():
     with open(os.path.join(OUT, "checklist.md"), "w", encoding="utf-8") as f:
         f.write(checklist)
 
-    # 输出三：轮换合规检查（真读台账判定：scripts/check_rotation.py；
-    # 台账缺失/不可解析时按降级规则输出「无法判定」，绝不假装通过）
-    ledger = os.environ.get("FVD_LEDGER_PATH") or os.path.join(SKILL, "used-visual-ledger.md")
-    candidate = {
-        "platform": inp.get("platform") or theme,
-        "date": inp.get("date") or _date.today().isoformat(),
-        "scene_category": inp.get("scene_category"),
-        "outfit": inp.get("outfit"),
-        "styling": inp.get("styling"),
-        "asset_id": inp.get("asset_id"),
-        "asset_grade": inp.get("asset_grade"),
-        "uses_standard_portrait": bool(inp.get("uses_standard_portrait", False)),
-    }
-    # 场景文字本身写明白底标准照/白底棚拍时，不靠调用者另设标志才拦（白底三禁）
-    if white_hits:
-        candidate["uses_standard_portrait"] = True
-    if not candidate["scene_category"] and any(w in scene for w in WHITE_STUDIO_WORDS):
-        candidate["scene_category"] = "白底棚拍"
-    _rot_code, rot_report = check_rotation.run(ledger, candidate)
-    # 仓内台账路径按相对路径展示：样例输出不带本机绝对路径，可在任何机器上复现
-    ledger_abs = os.path.abspath(ledger)
-    if ledger_abs.startswith(SKILL + os.sep):
-        rot_report = rot_report.replace(ledger_abs, os.path.relpath(ledger_abs, SKILL))
     entry = f"""## 拟登记台账条目（字段见 references/ledger-format.md 正式格式 v1.0）
 - platform / post_no：{candidate['platform']} / {inp.get('post_no') or theme}
 - scene_category：{candidate['scene_category']}
@@ -276,13 +297,20 @@ def main():
 - ai_generated：true
 - ai_disclosure_text：本图由 AI 生成
 - ai_disclosure_method：{method}
-- ai_disclosure_basis：《人工智能生成合成内容标识办法》；小红书 AI 生成内容标识规则；EU AI Act Art. 50""" if not rejected else "## 台账登记\n- 本单已打回，不登记台账。"
+- ai_disclosure_basis：《人工智能生成合成内容标识办法》；小红书 AI 生成内容标识规则；EU AI Act Art. 50"""
+    if rejected:
+        entry = "## 台账登记\n- 本单已打回，不登记台账。"
+    elif conditional:
+        entry = entry.replace("## 拟登记台账条目", "## 待复核台账条目（轮换预检未得出「通过」：复核通过前不得写入台账）", 1)
+
     rotation = rot_report + "\n" + entry + "\n"
     with open(os.path.join(OUT, "rotation.md"), "w", encoding="utf-8") as f:
         f.write(rotation)
     print("demo 输出已生成：", OUT)
     print("终判：" + verdict)
-    return 3 if rejected else 0
+    if rejected:
+        return 3
+    return 5 if conditional else 0
 
 
 if __name__ == "__main__":
