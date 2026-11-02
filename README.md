@@ -6,7 +6,7 @@ Xiaohongshu, Instagram and LinkedIn.
 
 | | |
 |---|---|
-| Status | active · early — v1.1.0 (released 2026-10-30 with an SBOM and SLSA provenance, see [Releases](https://github.com/HUIIIM/founder-visual-director/releases) and [docs/RELEASING.md](docs/RELEASING.md); first release 1.0.0 on 2026-10-06); the runnable demo stops at prompt level (no image rendering); `evals/` holds one smoke run and a 7-case eval set |
+| Status | active · early — v1.1.0 prepared (CHANGELOG cut 2026-10-30); the `v1.1.0` tag and its signed GitHub Release (SBOM, Sigstore signatures, build provenance) are created by the release workflow after merge, see [Releases](https://github.com/HUIIIM/founder-visual-director/releases) and [docs/RELEASING.md](docs/RELEASING.md); first release 1.0.0 on 2026-10-06; the runnable demo stops at prompt level (no image rendering); `evals/` holds one smoke run and a 7-case eval set |
 | Type | vertciti skill (agent skill defined in [SKILL.md](SKILL.md)) |
 | Install / use | Load `SKILL.md` as a skill in your agent; try the zero-dependency demo with `python3 demo/run.py` |
 | Licence | MIT ([LICENSE](LICENSE)), Copyright (c) 2026 Jiahui Miao |
@@ -92,7 +92,7 @@ docs/         product one-pager
 ## Security
 
 See [SECURITY.md](SECURITY.md) to report a security issue; do not open a public issue. Data handling,
-including the founder-likeness assets the skill refers to, is described in [docs/PRIVACY.md](docs/PRIVACY.md). CI runs the demo eval, gitleaks secret scanning, dependency review and OpenSSF Scorecard.
+including the founder-likeness assets the skill refers to, is described in [docs/PRIVACY.md](docs/PRIVACY.md). CI runs the demo eval with ruff lint, unit tests and skill validation, gitleaks secret scanning, dependency review and OpenSSF Scorecard. The public OpenSSF Scorecard score was 6.9 / 10 on 2026-10-30 ([current score](https://scorecard.dev/viewer/?uri=github.com/HUIIIM/founder-visual-director)); Code-Review and Maintained are 0 and branch protection is not enabled.
 
 ## Contributing
 

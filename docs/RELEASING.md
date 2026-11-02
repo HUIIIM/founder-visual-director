@@ -11,19 +11,26 @@
    ```
 
 3. `.github/workflows/release.yml` 会自动：核对标签与 `SKILL.md` 版本一致、CHANGELOG 有对应小节；
-   跑单元测试与 `demo/eval.sh`；生成源码包、CycloneDX SBOM、`SHA256SUMS`；创建 GitHub Release；
-   再由 SLSA 生成器附上签名的构建来源证明（`*.intoto.jsonl`）。任一步失败都不会发布。
+   跑与 PR CI 相同的门禁（ruff、单元测试、`validate_skill.py`、`demo/eval.sh`、样例可复现）；
+   生成源码包、可复现的 CycloneDX SBOM 与 `SHA256SUMS`；对每个文件做 Sigstore 无密钥签名
+   （`<文件>.sigstore.json`）；生成 GitHub 构建来源证明（SLSA v1）；最后创建 GitHub Release。
+   任一步失败都不会发布。所有 action 按提交 SHA 固定。
 
 ## 校验 / Verify a release
 
 ```bash
 sha256sum -c SHA256SUMS
-slsa-verifier verify-artifact founder-visual-director-X.Y.Z.tar.gz \
-  --provenance-path multiple.intoto.jsonl \
-  --source-uri github.com/HUIIIM/founder-visual-director --source-tag vX.Y.Z
+# 签名：确认文件由本仓库 release.yml 在该标签上签出
+cosign verify-blob founder-visual-director-X.Y.Z.tar.gz \
+  --bundle founder-visual-director-X.Y.Z.tar.gz.sigstore.json \
+  --certificate-identity "https://github.com/HUIIIM/founder-visual-director/.github/workflows/release.yml@refs/tags/vX.Y.Z" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+# 来源证明：确认构建来自本仓库的 GitHub Actions
+gh attestation verify founder-visual-director-X.Y.Z.tar.gz --repo HUIIIM/founder-visual-director
 ```
 
-`slsa-verifier` 见 https://github.com/slsa-framework/slsa-verifier 。
+SBOM 可复现：在标签上设 `SOURCE_DATE_EPOCH=$(git log -1 --format=%ct vX.Y.Z)` 后运行
+`python3 scripts/make_sbom.py X.Y.Z out.json`，结果应与发布页的 `.cdx.json` 逐字节一致。
 
 ## 回滚 / Roll back
 

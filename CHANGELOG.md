@@ -1,15 +1,16 @@
 # 变更记录 / Changelog
 
 本文件记录本项目的所有重要变更。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
-版本以 git 标签为准（自 v1.1.0 起，发布页附 SBOM 与 SLSA 来源证明）；1.0.0 未打标签，取自首次提交说明。
-Versions follow git tags from v1.1.0 on (releases carry an SBOM and SLSA provenance); 1.0.0 was never tagged and comes from the initial commit.
+版本以 git 标签为准（自 v1.1.0 起，发布页附 SBOM、Sigstore 签名与构建来源证明）；1.0.0 未打标签，取自首次提交说明。
+Versions follow git tags from v1.1.0 on (releases carry an SBOM, Sigstore signatures and build provenance); 1.0.0 was never tagged and comes from the initial commit.
 
 ## [Unreleased]
 
 ## [1.1.0] - 2026-10-30
 
 ### Added
-- 发布流程：`release.yml` 在推送 `v*` 标签时生成源码包、CycloneDX SBOM（`scripts/make_sbom.py`）与 SHA256SUMS，并用 SLSA 生成器附上构建来源证明（`.intoto.jsonl`）；`docs/RELEASING.md` 写明发版、校验与回滚步骤。 / Release workflow with SBOM and SLSA provenance; release, verify and rollback guide.
+- 发布前动作增加替代文本（alt text）要求，QA 检查表增加对应勾选项；README 写明 OpenSSF Scorecard 公开分（2026-10-30 为 6.9 / 10）及未达项。 / Alt-text step before publishing; README states the public Scorecard score.
+- 发布流程：`release.yml` 在推送 `v*` 标签时先跑与 PR CI 相同的门禁（ruff、单元测试、skill 包校验、demo eval、样例可复现），再生成源码包、可复现的 CycloneDX SBOM（`scripts/make_sbom.py`，序列号取 UUIDv5、时间取标签提交时间）与 SHA256SUMS，逐个用 Sigstore 无密钥签名（`*.sigstore.json`），并附 GitHub 构建来源证明；所有 action 按提交 SHA 固定。`docs/RELEASING.md` 写明发版、校验与回滚步骤。 / Release workflow: CI-equivalent gate, reproducible SBOM, Sigstore signatures and build provenance; release, verify and rollback guide.
 - `demo.yml` CI：每个 PR 跑 `demo/eval.sh`、`ruff check`（`requirements-dev.txt` 按哈希安装）并确认样例未被改写；`demo/` 与 `scripts/` 清零 ruff 存量问题（输出逐字不变）；`SECURITY.md`、`docs/PRIVACY.md`；`.gitignore` 忽略仓根台账。 / Demo CI, SECURITY.md, PRIVACY.md.
 - 台账真实现（issue #6 P1 ③）：`references/ledger-format.md` 台账正式格式 v1.0（字段沿用 schema 草案 v0.1，定机器可读载体与结构化参考图字段 `references`，附备份说明）；`scripts/check_rotation.py` 轮换预检真读台账（相邻 3 篇 / 14 天同大类 / 冷却期 / S 级月度上限 / 白底三禁，规则数值运行时直读 rotation-rules.md），台账缺失/不可解析只出「无法判定（降级）」不冒充通过；`scripts/ledger_lib.py` 共用解析与字段校验；`demo/run.py` 轮换段接线真读判定（原仅查台账存在性）；样例台账与候选夹具入 `demo/fixtures/`，`demo/eval.sh` 纳为回归断言。 / Real ledger: formal ledger format v1.0, rotation precheck that actually reads the ledger, shared parser/validator, fixtures wired into eval.
 - 品牌锁与面部一致性可执行校验（issue #6 P1 ⑤）：`scripts/check_brand_lock.py`（运行时直读 `vertciti-brand-bundle.json`，校验手写色值/偏离字体/字标写法）；`scripts/check_face_consistency.py`（anchor 恰好 1 张、一图不兼两角、参考图存在性与 SHA-256 登记比对；一图一记录字段仅预留接口）。此前两项均只有散文规则、无任何检查。 / Executable brand-lock and face-consistency checkers (were prose-only).

@@ -118,7 +118,7 @@ metadata:
 三、场景与造型方案（含脸角度预设：摆拍/抓拍 + 视线落点答案）
 四、生图 prompt（正向 / 否定词带 / 禁用词 grep 结果 / 冲突审计结论）
 五、QA 检查表（逐项 pass/fail/需全尺寸复核）
-六、发布前动作（台账回写责任 + 24h 登记）
+六、发布前动作（台账回写责任 + 24h 登记 + 替代文本：每张图写一句描述画面内容的 alt text，含封面上的文字原文；IG / LinkedIn / 小红书发布时填入）
 七、AI 标识与声明（ai_generated / ai_disclosure_text / ai_disclosure_method / ai_disclosure_basis）
 ```
 

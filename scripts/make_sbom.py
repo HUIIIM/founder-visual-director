@@ -5,6 +5,10 @@ The skill has no runtime dependencies (demo and checkers use the Python standard
 The SBOM therefore lists the skill itself plus the hash-pinned dev tools from requirements-dev.txt,
 marked as excluded from the runtime.
 
+The output is reproducible: the serial number is a UUIDv5 of the release coordinates and the timestamp
+comes from SOURCE_DATE_EPOCH (the release job sets it to the tag's commit time). Without
+SOURCE_DATE_EPOCH the optional timestamp is omitted, so two builds of the same version are identical.
+
 Usage: python3 scripts/make_sbom.py VERSION OUTPUT.json
 """
 
@@ -33,6 +37,13 @@ def parse_requirements(path):
     return out
 
 
+def _timestamp():
+    epoch = os.environ.get("SOURCE_DATE_EPOCH")
+    if not epoch:
+        return {}
+    return {"timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(int(epoch)))}
+
+
 def build(version, requirements_path):
     if not re.match(r"^\d+\.\d+\.\d+$", version):
         raise ValueError(f"version must be MAJOR.MINOR.PATCH, got {version!r}")
@@ -52,10 +63,10 @@ def build(version, requirements_path):
     return {
         "bomFormat": "CycloneDX",
         "specVersion": "1.5",
-        "serialNumber": f"urn:uuid:{uuid.uuid4()}",
+        "serialNumber": f"urn:uuid:{uuid.uuid5(uuid.NAMESPACE_URL, f'{REPO_URL}/releases/tag/v{version}')}",
         "version": 1,
         "metadata": {
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            **_timestamp(),
             "component": {
                 "type": "application",
                 "bom-ref": f"{NAME}@{version}",

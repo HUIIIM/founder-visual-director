@@ -23,6 +23,23 @@ class MakeSbom(unittest.TestCase):
         self.assertEqual(ruff[0]["scope"], "excluded")
         self.assertTrue(ruff[0]["hashes"])
 
+    def test_sbom_is_reproducible(self):
+        req = os.path.join(ROOT, "requirements-dev.txt")
+        self.assertEqual(make_sbom.build("1.1.0", req), make_sbom.build("1.1.0", req))
+        self.assertNotEqual(make_sbom.build("1.1.0", req)["serialNumber"], make_sbom.build("1.1.1", req)["serialNumber"])
+
+    def test_timestamp_comes_from_source_date_epoch(self):
+        old = os.environ.get("SOURCE_DATE_EPOCH")
+        os.environ["SOURCE_DATE_EPOCH"] = "1793577600"
+        try:
+            sbom = make_sbom.build("1.1.0", os.path.join(ROOT, "requirements-dev.txt"))
+        finally:
+            if old is None:
+                os.environ.pop("SOURCE_DATE_EPOCH")
+            else:
+                os.environ["SOURCE_DATE_EPOCH"] = old
+        self.assertEqual(sbom["metadata"]["timestamp"], "2026-11-02T00:00:00Z")
+
     def test_bad_version_is_rejected(self):
         with self.assertRaises(ValueError):
             make_sbom.build("v1.1", os.path.join(ROOT, "requirements-dev.txt"))
