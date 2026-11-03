@@ -49,6 +49,11 @@ BYPASS_PROBES = {
     "white-background headshot": "white-background standard portrait, hyphenated",
     "headshot against a plain white wall": "white-background standard portrait, plain white",
     "cine\u200bmatic rooftop at dawn": "banned word split by a zero-width space",
+    # Round 7: the narrowed rules must still catch the real thing.
+    "中年男人在书房": "age: 中年 as a person",
+    "四十岁的创始人在书房": "age, Chinese numerals, the founder's own",
+    "ID photo of the founder": "standard portrait: id photo as words",
+    "founder portrait against a white wall": "white-background portrait: white wall",
 }
 
 BENIGN = [
@@ -66,6 +71,14 @@ BENIGN = [
     "生活感：周末菜市场买菜",
     "戴眼镜的创始人在窗边看书",
     "a famously quiet library",
+    # Round 7 (#46): false positives introduced by the round-6 table.
+    "founder in a plain white t-shirt, portrait orientation",
+    "a vivid photo essay of a founder's morning commute",
+    "solid photo wall in the office lobby",
+    "人群中年轻的创业者围坐讨论",
+    "初中年级的公益课堂",
+    "春节前夕的办公室，中年味渐浓",
+    "陪两岁的女儿在公园散步",
 ]
 
 

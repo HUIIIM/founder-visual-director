@@ -31,7 +31,12 @@ WHITE_PORTRAIT_WORDS = ["标准照", "标准头像", "证件照", "standard port
 # 白底场景词：中文 + 英文对译（#42：white backdrop / white seamless 原先漏判）
 PORTRAIT_WORDS = ["portrait", "headshot", "头像", "半身照", "肖像"]
 # 只有真正的白底词才把「人像」判成白底标准照；棚拍本身不等于白底（暗调棚拍是品牌美术方向，#46 第 6 轮）
-WHITE_BG_WORDS = ["白底", "白色背景", "white background", "white backdrop", "white seamless", "plain white"]
+WHITE_BG_WORDS = [
+    "白底", "白色背景", "白墙", "white background", "white backdrop", "white seamless",
+    "white wall", "plain white backdrop", "plain white studio",
+]
+# 构图术语里的 portrait 不是「人像」（#46 第 7 轮：portrait orientation 是竖构图）
+NOT_PORTRAIT = ["portrait orientation", "portrait mode", "portrait format", "portrait aspect"]
 WHITE_STUDIO_WORDS = WHITE_BG_WORDS + ["棚拍"]  # 只用于推断 scene_category（与 main 一致）
 ZERO_WIDTH = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff\u00ad"))
 OUT = os.environ.get("FVD_DEMO_OUT") or os.path.join(DEMO, "output")
@@ -94,6 +99,13 @@ def _latin_pattern(tok):
     `grin` 命中叙事调性 `grind`）。"""
     words = [w for w in re.split(r"[\s-]+", tok) if w]
     return r"\b" + r"[\s-]+".join(re.escape(w) for w in words) + r"\b"
+
+
+def _word_in(word, text):
+    """中文词按子串；拉丁词按词边界（#46 第 7 轮：`id photo` 曾命中 `vivid photo`）。"""
+    if re.search(r"[^\x00-\xff]", word):
+        return word in text
+    return re.search(r"\b" + re.escape(word) + r"\b", text) is not None
 
 
 def hits_in(text, tokens):
@@ -215,10 +227,13 @@ def main():
     b_hits = hits_in(scene + " " + theme, b_triggers)
     # 检查五：白底标准照永不作内容配图（白底三禁 1，事故级；不依赖台账）
     scene_l = re.sub(r"[\s-]+", " ", normalize_text(scene).lower())
-    white_hits = [w for w in WHITE_PORTRAIT_WORDS if w in scene_l]
+    white_hits = [w for w in WHITE_PORTRAIT_WORDS if _word_in(w, scene_l)]
     # 白底 + 人像/头像 = 标准照的另一种写法（#42：「studio portrait on white backdrop」原先放行）
-    white_scene = [w for w in WHITE_BG_WORDS if w in scene_l]
-    portrait = [w for w in PORTRAIT_WORDS if w in scene_l]
+    white_scene = [w for w in WHITE_BG_WORDS if _word_in(w, scene_l)]
+    scene_np = scene_l
+    for phrase in NOT_PORTRAIT:
+        scene_np = scene_np.replace(phrase, " ")
+    portrait = [w for w in PORTRAIT_WORDS if _word_in(w, scene_np)]
     if white_scene and portrait:
         white_hits.append(f"{white_scene[0]} + {portrait[0]}")
     if inp.get("uses_standard_portrait") is True:

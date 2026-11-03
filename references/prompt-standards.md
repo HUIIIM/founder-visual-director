@@ -63,8 +63,8 @@ grin, grins, grinned, grinning, beaming,
 \b\d{2}s\b
 \b\d+[\s-]*years?[\s-]*old\b
 \b(twenty|thirty|forty|fifty|sixty|seventy)[\s-]*years?[\s-]*old\b
-[0-9一二三四五六七八九十两]+\s*多?岁
-中年
+[0-9一二三四五六七八九十两]+\s*多?岁(?!的?(女儿|儿子|孩子|宝宝|小孩|女孩|男孩|妹妹|弟弟|侄|外甥))
+中年(人|男|女|的|创始人|大叔|阿姨)
 middle-aged
 \b(twenty|thirty|forty|fifty|sixty|seventy)[\s-]*something\b
 \b(twenties|thirties|forties|fifties|sixties|seventies)\b
