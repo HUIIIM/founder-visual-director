@@ -83,6 +83,17 @@ jobs:
           # same program outside .git/ (#36 round 4). Not ~/** itself: the runner workspace
           # lives under /home/runner. tests/test_workflow_allowlist.py
           # fails the build if any of this regresses.
+          # #40: tag mode adds a bare Read on top of this list, so scoping Read to ./** is not
+          # enough on its own: /proc (the OAuth token is in the process environment) and
+          # ~/.claude are denied explicitly, and gh may not read a body from a file
+          # (--body-file / -F), which would post any readable file to a public thread.
+          # The same exit exists through git (#47 round 7): `git commit -F/--file/-t <path>`
+          # or `-m "$(cat …)"` puts a file into a commit message that the allowed push
+          # publishes. Tag mode adds Bash(git commit:*) itself, so these are denies too, and
+          # any command substitution ($(…) or backticks) is denied outright.
+          # `//` = absolute path in Claude Code rules. #44 item 2 (ARCH-4): --max-turns caps
+          # the loop; timeout-minutes caps wall time.
           claude_args: >-
-            --allowedTools "Read,Glob,Grep,Write(./**),Edit(./**),Bash(git status),Bash(git diff),Bash(git diff --staged),Bash(git log --oneline -20),Bash(git rev-parse:*),Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git add:*),Bash(git commit:*),Bash(git push -u origin HEAD),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*)"
-            --disallowedTools "Edit(.git/**),Write(.git/**),Edit(**/.git/**),Write(**/.git/**),Edit(~/.gitconfig),Write(~/.gitconfig),Edit(~/.config/**),Write(~/.config/**)"
+            --allowedTools "Read(./**),Glob,Grep,Write(./**),Edit(./**),Bash(git status),Bash(git diff),Bash(git diff --staged),Bash(git log --oneline -20),Bash(git rev-parse:*),Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git add:*),Bash(git commit:*),Bash(git push -u origin HEAD),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*)"
+            --disallowedTools "Edit(.git/**),Write(.git/**),Edit(**/.git/**),Write(**/.git/**),Edit(~/.gitconfig),Write(~/.gitconfig),Edit(~/.config/**),Write(~/.config/**),Read(//proc/**),Read(~/.claude/**),Bash(gh * --body-file*),Bash(gh * -F *),Bash(gh * -F*),Bash(git commit -F*),Bash(git commit * -F*),Bash(git commit --file*),Bash(git commit * --file*),Bash(git commit -t*),Bash(git commit * -t*),Bash(git commit --template*),Bash(git commit * --template*),Bash(*$(*),Bash(*`*)"
+            --max-turns 40
