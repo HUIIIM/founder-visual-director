@@ -71,5 +71,13 @@ jobs:
           # subcommands = branch/commit/push, the gh subcommands = open PR + comment.
           # Named subcommands only (#32 P1-1): a bare Bash(git:*) also allowed
           # `git -c alias.x='!cmd' x`, i.e. any shell; a bare Bash(gh:*) allowed `gh api`.
+          # #36 SEC-A3: a `:*` prefix rule still accepts any later option, so every git
+          # command that can run a program or write a file through an option is pinned
+          # to an exact form (no `:*`): push (--receive-pack/--exec), diff/log/show
+          # (--output, --ext-diff). fetch/pull (--upload-pack) are not allowed at all;
+          # the checkout step already fetched what the job needs. Write/Edit may not
+          # touch .git/ (core.fsmonitor, hooks). tests/test_workflow_allowlist.py
+          # fails the build if any of this regresses.
           claude_args: >-
-            --allowedTools "Read,Glob,Grep,Write,Edit,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git rev-parse:*),Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(git pull:*),Bash(git push:*),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*)"
+            --allowedTools "Read,Glob,Grep,Write,Edit,Bash(git status),Bash(git diff),Bash(git diff --staged),Bash(git log --oneline -20),Bash(git rev-parse:*),Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git add:*),Bash(git commit:*),Bash(git push -u origin HEAD),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*)"
+            --disallowedTools "Edit(.git/**),Write(.git/**),Edit(**/.git/**),Write(**/.git/**)"
