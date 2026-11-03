@@ -8,6 +8,10 @@ is the only way to update the image. SVG text is rendered with the viewer's
 fonts, so the Chinese output displays correctly without bundling a CJK font.
 
 Usage: python3 scripts/render_demo_screenshot.py [--out docs/assets/demo-run.svg]
+       python3 scripts/render_demo_screenshot.py --check   # CI: fail if the committed
+                                                          # image no longer matches a real run
+The image carries no commit stamp, so it is deterministic and --check can
+compare it byte for byte.
 Exits 1 without writing anything if eval.sh fails or run.py rejects the sample
 (exit 0 = pass and 5 = conditional pass are both honest demo outcomes and are
 shown with their real exit code).
@@ -33,12 +37,6 @@ BG, FG, ACCENT, MUTED = "#161C22", "#F5F5F2", "#14B8A6", "#9AA3AF"
 def run(cmd, env):
     proc = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, check=False)
     return proc.returncode, (proc.stdout + proc.stderr).rstrip().splitlines()
-
-
-def commit():
-    out = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
-                         capture_output=True, text=True, check=False)
-    return out.stdout.strip() or "unknown"
 
 
 def wrap(text):
@@ -74,6 +72,8 @@ def svg(lines):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", default=os.path.join(ROOT, "docs", "assets", "demo-run.svg"))
+    ap.add_argument("--check", action="store_true",
+                    help="regenerate in memory and exit 1 if it differs from --out")
     args = ap.parse_args()
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -88,13 +88,27 @@ def main():
     # run.py prints the absolute temp output dir; keep the image machine-independent
     out1 = [ln.replace(tmp, "<tmp>") for ln in out1]
     out2 = [ln.replace(ROOT + os.sep, "").replace(ROOT, ".") for ln in out2]
-    lines = [(f"founder-visual-director · real run at commit {commit()}", MUTED), ("", FG),
+    lines = [("founder-visual-director · real run (scripts/render_demo_screenshot.py; CI checks it)", MUTED),
+             ("", FG),
              ("$ python3 demo/run.py", ACCENT)] + [(ln, FG) for ln in out1] + [
              (f"exit {rc1}（{RUN_OK[rc1]}）", MUTED), ("", FG), ("$ bash demo/eval.sh", ACCENT)] + [
              (ln, FG) for ln in out2] + [("exit 0", MUTED)]
+    image = svg(lines)
+    if args.check:
+        try:
+            with open(args.out, encoding="utf-8") as f:
+                current = f.read()
+        except OSError:
+            current = None
+        if current != image:
+            print(f"{os.path.relpath(args.out, ROOT)} is stale: it no longer matches a real run. "
+                  "Run python3 scripts/render_demo_screenshot.py and commit the result.", file=sys.stderr)
+            return 1
+        print("screenshot up to date:", os.path.relpath(args.out, ROOT))
+        return 0
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as f:
-        f.write(svg(lines))
+        f.write(image)
     print("screenshot written:", os.path.relpath(args.out, ROOT))
     return 0
 

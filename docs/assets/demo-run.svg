@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="980" height="320" viewBox="0 0 980 320" role="img" aria-label="Real run of demo/run.py and demo/eval.sh">
 <rect width="100%" height="100%" rx="8" fill="#161C22"/>
 <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Noto Sans Mono CJK SC', monospace" font-size="14">
-<text x="20" y="35" fill="#9AA3AF" xml:space="preserve">founder-visual-director · real run at commit 441df88</text>
+<text x="20" y="35" fill="#9AA3AF" xml:space="preserve">founder-visual-director · real run (scripts/render_demo_screenshot.py; CI checks it)</text>
 <text x="20" y="55" fill="#F5F5F2" xml:space="preserve"></text>
 <text x="20" y="75" fill="#14B8A6" xml:space="preserve">$ python3 demo/run.py</text>
 <text x="20" y="95" fill="#F5F5F2" xml:space="preserve">demo 输出已生成： &lt;tmp&gt;</text>

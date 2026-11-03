@@ -7,7 +7,7 @@ Versions follow git tags from v1.1.0 on (releases carry an SBOM, Sigstore signat
 ## [Unreleased]
 
 ### Added
-- README 增加真实运行截图 `docs/assets/demo-run.svg`（DOC-5）：由 `scripts/render_demo_screenshot.py` 取 `demo/run.py` 与 `demo/eval.sh` 的实际输出生成，图中标明运行时的提交；无台账时样例如实显示为「条件通过」（退出码 5）。 / README shows a real demo run, regenerated from actual command output.
+- README 增加真实运行截图 `docs/assets/demo-run.svg`（DOC-5）：由 `scripts/render_demo_screenshot.py` 取 `demo/run.py` 与 `demo/eval.sh` 的实际输出生成，CI 以 `--check` 比对，图与实际运行不一致即失败；无台账时样例如实显示为「条件通过」（退出码 5）。 / README shows a real demo run, regenerated from actual command output.
 
 ## [1.1.0] - 2026-10-30
 

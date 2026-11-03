@@ -45,7 +45,7 @@ bash demo/eval.sh      # prints PASS / FAIL for the three deliverables
 ![Real run of demo/run.py and demo/eval.sh: the sample brief ends in a conditional pass because no asset ledger is present, and the eval passes](https://raw.githubusercontent.com/HUIIIM/founder-visual-director/main/docs/assets/demo-run.svg)
 
 The image above is a real run, regenerated from the commands' actual output by
-`python3 scripts/render_demo_screenshot.py`; it shows the commit it ran at. Without an asset ledger the
+`python3 scripts/render_demo_screenshot.py`, and CI (`--check`) fails if it stops matching. Without an asset ledger the
 sample brief ends in a conditional pass (exit 5), never a pass.
 
 No external dependencies beyond Python 3. A worked output set is committed in
