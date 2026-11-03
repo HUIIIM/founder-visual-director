@@ -43,12 +43,18 @@ HDR / 过饱和 / oversaturated / 电影感灯光 / 完美皮肤 / perfect skin 
 `visual-anchor-spec.md` 的「暗调电影质感」是给人看的美术方向，**不得原样写进 prompt**。
 写进 prompt 时改用可执行的摄影描述，例如 `low-key exposure, deep shadows, subtle film grain`。
 
-## 机读规则附表（工具直读，v0.1）
+## 机读规则附表（工具直读，v0.2）
 
 > 本节是上文与 SKILL.md 规则的机读化转写，供 demo / 工具在运行时直读判定。
 > 口径以上文与 SKILL.md 为准；本节只做格式转写，不新增规则。新增/修改条目须与源规则同步评审。
 > 来源：面部禁词与年龄模式 ← SKILL.md「prompt 模板铁律」1（禁写面部特征词：眼/鼻/笑/年龄感等）；
 > 互斥对 ← SKILL.md Step 3-6 与上文七规范 6；B 级触发 ← SKILL.md Step 2-1（真实可识别人物转 B 级严审）。
+>
+> **两档判定（v0.2，#46）**：不带 `review_` 前缀的小节是**硬拦**（命中即打回），内容与 v0.1 逐字相同；
+> `review_` 小节是 v0.2 补的中英对译、词形变化与改写（#42 的绕过探针），命中只**转人工复核**
+> （终判上限「条件通过」，注明「人工复核：疑似…」），不硬拦——这些写法在正常场景里也常见
+> （「famous for its pour-over」「酒店宴会厅」「和三岁的儿子」），硬拦的误报代价高于转人工。
+> 匹配规则：拉丁词条词边界、词间空白与连字符等价、词形变化逐条列出（不做后缀通配）；匹配前去零宽字符并做 NFKC。
 
 ```text
 [face_words]
@@ -64,6 +70,22 @@ middle-aged
 自拍|selfie|手机自拍 <> 85mm
 [b_level_triggers]
 名人, 合影, 晚宴, 政治名媛, celebrity, red carpet
+[review_banned]
+电影感, 电影质感, 电影级, lifted shadows, lifting shadows, brightened
+[review_face_words]
+smiles, smiled, smiley, grins, grinned, grinning, beaming,
+眼神, 双眼, 目光, 嘴角, 笑
+[review_age_patterns]
+\b\d+[\s-]*years?[\s-]*old\b
+\b(twenty|thirty|forty|fifty|sixty|seventy)[\s-]*years?[\s-]*old\b
+[0-9一二三四五六七八九十两]+\s*多?岁(出头)?的?(女|男)?(创始人|男人|女人|男性|女性|男子|女子|老板|企业家|CEO)
+(?<!其)(创始人|他|她)[^，。,.；;和陪带与跟]{0,6}[0-9一二三四五六七八九十两]+\s*多?岁(?!的?(女儿|儿子|孩子|宝宝|小孩))
+中年(人|男|女|的|创始人|大叔|阿姨)
+\b(twenty|thirty|forty|fifty|sixty|seventy)[\s-]*something\b
+\b(twenties|thirties|forties|fifties|sixties|seventies)\b
+[review_b_level_triggers]
+宴会, 明星, 政要, 红毯, 颁奖典礼, celebrities,
+famous, actor, actress, politician, socialite, gala, dinner party, banquet
 ```
 
 ## 一体化构图要求
