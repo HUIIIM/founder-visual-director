@@ -107,8 +107,11 @@ jobs:
           # fails the build if any of this regresses.
           # #40: tag mode adds a bare Read on top of this list, so scoping Read to ./** is not
           # enough on its own: /proc (the OAuth token is in the process environment) and
-          # ~/.claude are denied explicitly, and gh may not read a body from a file
-          # (--body-file / -F), which would post any readable file to a public thread.
+          # ~/.claude are denied explicitly. gh --body-file / -F (which would post any readable
+          # file to a public thread) is denied by text only, and quote-splitting
+          # (--body-f"ile") gets past that (#51 round 4): on comment/issue runs the gh write
+          # commands are therefore not allowed at all; on this dispatch path it is a residual
+          # sent for a ruling in #52.
           # The same exit exists through git (#47 round 7): `git commit -F/--file/-t <path>`
           # or `-m "$(cat …)"` puts a file into a commit message that the allowed push
           # publishes. Tag mode adds Bash(git commit:*) itself, so these are denies too, and
@@ -139,8 +142,11 @@ jobs:
           use_commit_signing: true
           prompt: ${{ inputs.prompt }}
           # Same lists as the dispatch step above minus every git subcommand that takes a
-          # file option (checkout, switch, add, commit, rm, push); see the comments there.
+          # file option (checkout, switch, add, commit, rm, push), and minus every gh command
+          # that takes a body file: quote-split --body-f"ile" / -"F" read any runner file and
+          # post it (#51 round 4). Replies go through the action's own
+          # mcp__github_comment__update_claude_comment, which takes the body as a string.
           claude_args: >-
-            --allowedTools "Read(./**),Glob,Grep,Write(./**),Edit(./**),Bash(git status),Bash(git diff),Bash(git diff --staged),Bash(git log --oneline -20),Bash(git rev-parse:*),Bash(git branch:*),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*)"
+            --allowedTools "Read(./**),Glob,Grep,Write(./**),Edit(./**),Bash(git status),Bash(git diff),Bash(git diff --staged),Bash(git log --oneline -20),Bash(git rev-parse:*),Bash(git branch:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh issue view:*),Bash(gh issue list:*)"
             --disallowedTools "Edit(.git/**),Write(.git/**),Edit(**/.git/**),Write(**/.git/**),Read(.git/**),Read(**/.git/**),Edit(~/.gitconfig),Write(~/.gitconfig),Edit(~/.config/**),Write(~/.config/**),Read(//proc/**),Read(~/.claude/**),Bash(gh * --body-file*),Bash(gh * -F *),Bash(gh * -F*),Bash(git commit -F*),Bash(git commit * -F*),Bash(git commit --file*),Bash(git commit * --file*),Bash(git commit -t*),Bash(git commit * -t*),Bash(git commit --template*),Bash(git commit * --template*),Bash(*$(*),Bash(*`*),Bash(git checkout --pathspec-from-file*),Bash(git checkout * --pathspec-from-file*),Bash(git checkout --pathspec-file-nul*),Bash(git checkout * --pathspec-file-nul*),Bash(git commit --pathspec-from-file*),Bash(git commit * --pathspec-from-file*),Bash(git commit --pathspec-file-nul*),Bash(git commit * --pathspec-file-nul*),Bash(git add --pathspec-from-file*),Bash(git add * --pathspec-from-file*),Bash(git add --pathspec-file-nul*),Bash(git add * --pathspec-file-nul*),Bash(git rm --pathspec-from-file*),Bash(git rm * --pathspec-from-file*),Bash(git rm --pathspec-file-nul*),Bash(git rm * --pathspec-file-nul*),Bash(git switch --pathspec-from-file*),Bash(git switch * --pathspec-from-file*),Bash(git switch --pathspec-file-nul*),Bash(git switch * --pathspec-file-nul*),Bash(*pathspec*),Bash(*environ*),Bash(*/proc/*)"
             --max-turns 40

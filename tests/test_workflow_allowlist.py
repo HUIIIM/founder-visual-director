@@ -43,7 +43,7 @@ class ClaudeWorkflowAllowlist(unittest.TestCase):
                 self.assertFalse(rule.endswith(":*)") or "*" in rule, rule)
                 self.assertNotRegex(rule, r"--(receive-pack|exec|output|ext-diff)|\s-c\s", rule)
 
-    def test_gh_limited_to_pr_and_issue_reads_and_comments(self):
+    def test_gh_limited_to_pr_and_issue_reads_and_comments(self):  # dispatch step (first list)
         for rule in self.allowed:
             if rule.startswith("Bash(gh"):
                 self.assertRegex(rule, r"^Bash\(gh (pr|issue) (create|view|list|comment):\*\)$", rule)
@@ -141,6 +141,8 @@ class ClaudeWorkflowAllowlist(unittest.TestCase):
         allowed = re.search(r'--allowedTools "([^"]*)"', event).group(1).split(",")
         for rule in allowed:
             self.assertNotRegex(rule, r"^Bash\(git (checkout|switch|add|commit|rm|push|restore|reset|stash)\b", rule)
+            # #51 round 4: gh write commands take --body-file/-F, which quote-splitting gets past.
+            self.assertNotRegex(rule, r"^Bash\(gh (pr|issue) (comment|create|edit|review)\b", rule)
         for b in runs:
             self.assertRegex(b, r'allowed_non_write_users: "-no-such-user-"')
 
