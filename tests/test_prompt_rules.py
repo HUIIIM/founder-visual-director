@@ -12,6 +12,7 @@ rejecting every rewording keeps rejecting normal founder scenes, so the table ha
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -29,6 +30,8 @@ HARD_PROBES = {
     "smiling founder at a cafe": "face word (v0.1)",
     "与名人合影的晚宴": "B-level (v0.1)",
     "白底标准照作为封面": "white-background standard portrait (v0.1)",
+    "standard portraits of the founder as the banner": "standard portrait, plural (round 10)",
+    "standard avatars grid": "standard avatar, plural (round 10)",
 }
 
 REVIEW_PROBES = {
@@ -176,6 +179,41 @@ class BypassProbes(unittest.TestCase):
                 rc, out, _ = run_demo(scene)
                 self.assertIn(rc, (0, 5), out[-400:])
                 self.assertNotIn(REVIEW_MARK, out)
+
+
+def _main_hits(text, tokens):
+    """The v0.1 matcher on main: CJK substring, Latin \\btoken\\b case-insensitive on raw text."""
+    out = []
+    for tok in tokens:
+        if re.search(r"[^\x00-\xff]", tok):
+            if tok in text:
+                out.append(tok)
+        elif re.search(r"\b" + re.escape(tok) + r"\b", text, re.IGNORECASE):
+            out.append(tok)
+    return out
+
+
+class HardTierNotLooserThanMain(unittest.TestCase):
+    """Round 10 (#46): a matching-semantics change narrowed a hard-tier rule (plural
+    `standard portraits` passed). For every hard-tier token and common variants, whenever
+    main's own matcher would reject the scene, this head must reject it too."""
+
+    def test_hard_tier_is_at_least_as_strict_as_main(self):
+        sys.path.insert(0, os.path.join(ROOT, "demo"))
+        import run as demo_run
+
+        _, _, banned, face_words, _, _, b_triggers = demo_run.load_rules()
+        white = demo_run.WHITE_PORTRAIT_WORDS
+        looser = []
+        for tok in banned + face_words + b_triggers + white:
+            for scene in (f"{tok}s at the office", f"{tok.upper()} at the office", f"founder {tok} today"):
+                main_rejects = (
+                    _main_hits(scene, banned + face_words + b_triggers)
+                    or any(w in scene.lower() for w in white)
+                )
+                if main_rejects and run_demo(scene)[0] != 3:
+                    looser.append(scene)
+        self.assertEqual(looser, [], "hard tier looser than main")
 
 
 class Proportionality(unittest.TestCase):

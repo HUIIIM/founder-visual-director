@@ -7,7 +7,7 @@ Versions follow git tags from v1.1.0 on (releases carry an SBOM, Sigstore signat
 ## [Unreleased]
 
 ### Changed
-- 机读规则附表升至 v0.2，改为两档判定（#42、#46）：不带前缀的小节与 v0.1 逐字相同、命中即打回；`review_` 小节收 v0.2 补的中英对译、词形变化与改写（英文 B 级触发 famous / actor / gala / dinner party、文字与中文数字年龄、中年、眼神 / 目光 / 嘴角 / 笑、电影感 / 电影质感 / 电影级、红毯 / 宴会、证件照与「白底背景 + 人像」等），命中只转人工复核（终判上限条件通过，注明「人工复核：疑似…」），不硬拦。匹配前去零宽字符并 NFKC，拉丁词条词间空白与连字符等价。测试：6 条硬拦探针、38 条转人工探针、25 条正常场景（独立评估第 6–9 轮的全部误报）、54 条真实场景语料（硬拦必须为 0，转人工率上限 30%，实测 26%）。 / Rule table v0.2 has two tiers: v0.1 rules hard-reject; the v0.2 rewordings flag for manual review, so new coverage cannot hard-reject normal scenes.
+- 机读规则附表升至 v0.2，改为两档判定（#42、#46）：不带前缀的小节与 v0.1 逐字相同、命中即打回；`review_` 小节收 v0.2 补的中英对译、词形变化与改写（英文 B 级触发 famous / actor / gala / dinner party、文字与中文数字年龄、中年、眼神 / 目光 / 嘴角 / 笑、电影感 / 电影质感 / 电影级、红毯 / 宴会、证件照与「白底背景 + 人像」等），命中只转人工复核（终判上限条件通过，注明「人工复核：疑似…」），不硬拦。匹配前去零宽字符并 NFKC，拉丁词条词间空白与连字符等价。测试：8 条硬拦探针（含 standard portraits 复数）、硬拦档「不比 main 松」的逐词变体测试、38 条转人工探针、25 条正常场景（独立评估第 6–9 轮的全部误报）、54 条真实场景语料（硬拦必须为 0，转人工率上限 30%，实测 26%）。 / Rule table v0.2 has two tiers: v0.1 rules hard-reject; the v0.2 rewordings flag for manual review, so new coverage cannot hard-reject normal scenes.
 - demo 的 QA 检查表改为逐项取自 references（脸角度 3 + 人体比例 10 + 真实感 11 + 背景 5），条数不符按规则读取失败拒绝放行；满足 `evals.json` #7 的断言。 / The demo QA checklist now carries every item from references.
 
 ### Fixed

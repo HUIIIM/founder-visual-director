@@ -252,7 +252,9 @@ def main():
     b_hits = hits_in(scene + " " + theme, b_triggers)
     # 检查五：白底标准照永不作内容配图（白底三禁 1，事故级；不依赖台账）
     scene_l = re.sub(r"[\s-]+", " ", normalize_text(scene).lower())
-    white_hits = [w for w in WHITE_PORTRAIT_WORDS if _word_in(w, scene_l)]
+    # 硬拦白底词保持 v0.1 的子串语义（#46 第 10 轮：加词边界后 standard portraits 复数漏判），
+    # 只在其上叠加归一化，不收窄
+    white_hits = [w for w in WHITE_PORTRAIT_WORDS if w in scene.lower() or w in scene_l]
     # 白底 + 人像/头像 = 标准照的另一种写法（#42：「studio portrait on white backdrop」原先放行）
     scene_raw = re.sub(r"\s+", " ", normalize_text(scene).lower())  # 保留连字符：off-white 不是 white
     white_scene = [m.group(0) for p in WHITE_BG_PATTERNS for m in [re.search(p, scene_raw)] if m]
