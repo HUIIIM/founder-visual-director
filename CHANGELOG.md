@@ -7,23 +7,26 @@ Versions follow git tags from v1.1.0 on (releases carry an SBOM, Sigstore signat
 ## [Unreleased]
 
 ### Changed
+- 发布流程：标签所在提交的 CHANGELOG `[Unreleased]` 仍有条目时拒绝发布（#43），避免发布说明漏列已随包发出的变更。 / Release refuses a tag whose CHANGELOG still lists [Unreleased] entries.
 - 机读规则附表升至 v0.2，改为两档判定（#42、#46）：不带前缀的小节与 v0.1 逐字相同、命中即打回；`review_` 小节收 v0.2 补的中英对译、词形变化与改写（英文 B 级触发 famous / actor / gala / dinner party、文字与中文数字年龄、中年、眼神 / 目光 / 嘴角 / 笑、电影感 / 电影质感 / 电影级、红毯 / 宴会、证件照与「白底背景 + 人像」等），命中只转人工复核（终判上限条件通过，注明「人工复核：疑似…」），不硬拦。匹配前去零宽字符并 NFKC，拉丁词条词间空白与连字符等价。测试：8 条硬拦探针（含 standard portraits 复数）、硬拦档「不比 main 松」的逐词变体测试、38 条转人工探针、25 条正常场景（独立评估第 6–9 轮的全部误报）、54 条真实场景语料（硬拦必须为 0，转人工率上限 30%，实测 26%）。 / Rule table v0.2 has two tiers: v0.1 rules hard-reject; the v0.2 rewordings flag for manual review, so new coverage cannot hard-reject normal scenes.
 - demo 的 QA 检查表改为逐项取自 references（脸角度 3 + 人体比例 10 + 真实感 11 + 背景 5），条数不符按规则读取失败拒绝放行；满足 `evals.json` #7 的断言。 / The demo QA checklist now carries every item from references.
 
 ### Fixed
 - 红线「已发布图永久退役（含跨平台复用）」改为机器判定（#41）：轮换预检新增检查「已发布图永久退役」，候选 `image_sha256` 与任一已发布 / 已退役条目相同即违规，不分平台、不看日期；候选缺哈希、或已发布 / 已退役条目缺哈希（看不见那张图）均为「无法判定」，不报「通过」。冷却期改为不分平台计算；`asset_id`、服装、造型、场景大类比对前统一归一（零宽、全角、空白、大小写），服装分隔符（+ 、 / & ,）统一；`asset_id` / `image_sha256` 格式不合法记为缺陷。**迁移提示**：既有台账请为已发布条目补登 `image_sha256`，否则该检查只能「无法判定」；含非 ASCII 字符的 `asset_id`（如 `小红书素材009`）现记为缺陷，需改成字母、数字、连字符。 / The published-images-are-retired red line is now enforced by machine; cooldown counts every platform; ledger keys are normalised.
-- 面部一致性校验在空台账或全部条目已退役时不再报「通过」，改为「无法判定」（退出码 2）（#23 第 1 项）。 / Face check on an empty or all-retired ledger is "cannot judge", not a pass.
-- 轮换报告里调用方提供的值单行化并加「」，伪造不了「- 结论：」行；`demo/run.py` 只认最后一条「- 结论：」行（#23 第 2 项）。 / Candidate text can no longer forge the rotation verdict line.
-- 品牌锁补查 `color-mix()` / `device-cmyk()` / `light-dark()` 与 hue 单位 turn / rad / grad 的 `hsl()`（#23 第 4 项）。 / Remaining brand-lock colour bypasses closed.
-- 发布流程先核对标签所在提交在 `main` 上，否则不发布（#23 第 6 项）。 / Release refuses a tag whose commit is not on main.
 - 模特资产授权检查不再「什么都没查也通过」（#32 P2-5）：候选带 `model_id`，全台账同一 `model_id` 任一条记为 expired / revoked 即违规；候选与台账都没有授权状态、或候选缺 `model_id`，均为「无法判定」（结论上限条件通过）。`model_id` 比对前统一去空白、转小写，大小写或空白变体绕不过台账撤销；候选填 none 而同一 `asset_id`（同样去空白、转小写）在台账登记过模特时为「无法判定」；台账条目的 `model_id` 含全角连字符、零宽字符等非法字符时记为条目缺陷，不再静默漏掉撤销记录。样例候选与 demo 输入补 `model_id` / `model_consent_status`。 / Consent check consults the ledger and no longer passes on missing data.
 
 ## [1.1.0] - 2026-10-30
+
+> 发布于 2026-11-03（标签 `v1.1.0` 在 `0c8e6da`）。下列 #23 的四条修复随包发出，原先误留在 [Unreleased]，已移入本节（#43）。 / Released 2026-11-03; four #23 fixes that shipped in the tarball were moved here from [Unreleased].
 
 ### Added (publishing)
 - 发布前动作增加替代文本（alt text）要求，QA 检查表增加对应勾选项；README 写明 OpenSSF Scorecard 公开分（2026-10-30 为 6.9 / 10）及未达项。 / Alt-text step before publishing; README states the public Scorecard score.
 
 ### Fixed
+- 面部一致性校验在空台账或全部条目已退役时不再报「通过」，改为「无法判定」（退出码 2）（#23 第 1 项）。 / Face check on an empty or all-retired ledger is "cannot judge", not a pass.
+- 轮换报告里调用方提供的值单行化并加「」，伪造不了「- 结论：」行；`demo/run.py` 只认最后一条「- 结论：」行（#23 第 2 项）。 / Candidate text can no longer forge the rotation verdict line.
+- 品牌锁补查 `color-mix()` / `device-cmyk()` / `light-dark()` 与 hue 单位 turn / rad / grad 的 `hsl()`（#23 第 4 项）。 / Remaining brand-lock colour bypasses closed.
+- 发布流程先核对标签所在提交在 `main` 上，否则不发布（#23 第 6 项）。 / Release refuses a tag whose commit is not on main.
 - 轮换结论进入终判（独立评估 #16 P1-1）：`demo/run.py` 先跑轮换预检再写交付物；轮换违规 = 打回（退出码 3，不给台账条目）；无法判定 / 条件通过 = 终判「条件通过」（新退出码 5，只给「待复核」条目）。此前违规台账照样「终判：通过」、退出码 0。 / The rotation verdict now drives the final verdict and exit code.
 - 缺无关字段不再把台账条目踢出轮换比对（#16 P1-2）：每项检查使用具备该项所需字段的全部条目，缺 `model_id`、AI 声明等字段只记不确定性；台账有条目但没有一条可用时为「无法判定」。 / Entries missing unrelated fields still count in rotation checks.
 - 平台枚举与别名归一（#16 P1-3）：`platform` 只能是 小红书 / IG / LinkedIn（`XHS`、`Instagram` 等别名归一）；不再从 `theme_platform` 推断平台，非法或缺失即「无法判定」。 / Platform enum with aliases; no fallback to the theme string.

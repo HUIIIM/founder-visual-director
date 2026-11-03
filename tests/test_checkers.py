@@ -280,6 +280,13 @@ class Issue23Leftovers(unittest.TestCase):
         self.assertIn("git merge-base --is-ancestor", wf)
         self.assertLess(wf.index("git merge-base --is-ancestor"), wf.index("gh release create"))
 
+    def test_release_refuses_pending_unreleased_entries(self):
+        # #43: v1.1.0 shipped four fixes that its release notes did not list.
+        with open(os.path.join(ROOT, ".github", "workflows", "release.yml"), encoding="utf-8") as f:
+            wf = f.read()
+        self.assertIn("[Unreleased] still lists", wf)
+        self.assertLess(wf.index("[Unreleased] still lists"), wf.index("gh release create"))
+
 
 if __name__ == "__main__":
     unittest.main()

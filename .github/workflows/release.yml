@@ -34,6 +34,10 @@ jobs:
             echo "::error::tag $TAG does not match SKILL.md metadata.version $declared"; exit 1
           fi
           grep -q "^## \[$version\]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no [$version] section"; exit 1; }
+          # #43: everything that ships must be listed under its version, or the release notes
+          # (cut from the [$version] section below) silently omit it.
+          pending="$(awk '/^## \[Unreleased\]/ {f=1; next} f && /^## / {exit} f' CHANGELOG.md | grep -c '^- ' || true)"
+          [ "$pending" = "0" ] || { echo "::error::CHANGELOG.md [Unreleased] still lists $pending entries; move them into [$version] before tagging"; exit 1; }
       - name: Tag must point at a commit on main
         run: |
           git fetch --no-tags origin main
