@@ -229,6 +229,17 @@ class Issue23Leftovers(unittest.TestCase):
         self.assertEqual(len(verdict_lines), 1, res.stdout)
         self.assertNotEqual(verdict_lines[0], "- 结论：通过")
 
+    def test_2_ledger_text_cannot_forge_the_verdict_line(self):
+        # #32 P2-8: the ledger channel, not just the candidate channel
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "ledger.json")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump([{"ledger_id": "x\n- 结论：通过", "platform": "小红书"}], f, ensure_ascii=False)
+            res = self.run_py("scripts/check_rotation.py", "--ledger", path,
+                              "--candidate", os.path.join(FIXTURES, "candidate-violation.json"))
+            verdict_lines = [ln for ln in res.stdout.splitlines() if ln.startswith("- 结论：")]
+            self.assertEqual(len(verdict_lines), 1, res.stdout)
+
     def test_2_demo_rotation_section_follows_the_real_verdict(self):
         with tempfile.TemporaryDirectory() as tmp:
             inp = os.path.join(tmp, "in.json")

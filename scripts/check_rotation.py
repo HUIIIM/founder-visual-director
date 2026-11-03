@@ -268,7 +268,7 @@ def run(ledger_path, candidate):
         *(_shown(c.get(k)) for k in ("platform", "date", "scene_category", "asset_id", "asset_grade"))))
     lines.append(f"- 台账条目：共 {len(entries)} 条，字段缺陷 {len(problems)} 处")
     for p in problems:
-        lines.append(f"- 台账缺陷：{p}")
+        lines.append("- 台账缺陷：" + re.sub(r"\s+", " ", p))
     lines.append("")
     for line in result["checks"]:
         lines.append("- 检查·" + re.sub(r"\s+", " ", line))
