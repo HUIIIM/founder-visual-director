@@ -90,6 +90,14 @@ class ClaudeWorkflowAllowlist(unittest.TestCase):
         with open(WORKFLOW, encoding="utf-8") as f:
             self.assertRegex(f.read(), r"persist-credentials:\s*false")
 
+    def test_git_cannot_read_a_file_through_pathspec_from_file(self):
+        # #51 round 1: git checkout/commit --pathspec-from-file=.git/config echoed the file
+        # (origin URL with the action's token) line by line in the error output.
+        for cmd in ("checkout", "commit", "add", "rm", "switch"):
+            for opt in ("--pathspec-from-file", "--pathspec-file-nul"):
+                self.assertIn(f"Bash(git {cmd} {opt}*)", self.denied)
+                self.assertIn(f"Bash(git {cmd} * {opt}*)", self.denied)
+
     def test_turn_cap(self):
         # #44 item 2 (SOTA ARCH-4): the agent loop has a hard step bound.
         with open(WORKFLOW, encoding="utf-8") as f:
