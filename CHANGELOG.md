@@ -7,6 +7,7 @@ Versions follow git tags from v1.1.0 on (releases carry an SBOM, Sigstore signat
 ## [Unreleased]
 
 ### Fixed
+- 红线「已发布图永久退役（含跨平台复用）」改为机器判定（#41）：轮换预检新增检查「已发布图永久退役」，候选 `image_sha256` 与任一已发布 / 已退役条目相同即违规，不分平台、不看日期；候选缺哈希为「无法判定」。冷却期改为不分平台计算；`asset_id`、服装、造型、场景大类比对前统一归一（零宽、全角、空白、大小写），`asset_id` / `image_sha256` 格式不合法记为缺陷。 / The published-images-are-retired red line is now enforced by machine; cooldown counts every platform; ledger keys are normalised.
 - 面部一致性校验在空台账或全部条目已退役时不再报「通过」，改为「无法判定」（退出码 2）（#23 第 1 项）。 / Face check on an empty or all-retired ledger is "cannot judge", not a pass.
 - 轮换报告里调用方提供的值单行化并加「」，伪造不了「- 结论：」行；`demo/run.py` 只认最后一条「- 结论：」行（#23 第 2 项）。 / Candidate text can no longer forge the rotation verdict line.
 - 品牌锁补查 `color-mix()` / `device-cmyk()` / `light-dark()` 与 hue 单位 turn / rad / grad 的 `hsl()`（#23 第 4 项）。 / Remaining brand-lock colour bypasses closed.

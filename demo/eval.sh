@@ -113,7 +113,7 @@ for s in "相邻 3 篇内服装重复" "相邻 3 篇内造型重复" "14 天同�
 done
 # 轮换合规例：接合规台账 -> rotation.md 结论必须为通过
 cat > "$FX/cand-compliant.json" <<'EOF'
-{"aspect":"3:4","mood":"生活感","scene":"城市晨跑后拉伸","theme_platform":"小红书第 11 篇封面","platform":"小红书","post_no":"第 11 篇","date":"2026-10-26","scene_category":"户外运动","outfit":"黑色速干T恤+短裤","styling":"运动短发","asset_id":"xhs-asset-new-run","asset_grade":"A","model_id":"miao-v1","model_consent_status":"active"}
+{"aspect":"3:4","mood":"生活感","scene":"城市晨跑后拉伸","theme_platform":"小红书第 11 篇封面","platform":"小红书","post_no":"第 11 篇","date":"2026-10-26","scene_category":"户外运动","outfit":"黑色速干T恤+短裤","styling":"运动短发","asset_id":"xhs-asset-new-run","asset_grade":"A","model_id":"miao-v1","model_consent_status":"active","image_sha256":"f57d196a115ea44f2531b38d8c758498ffb15edba2735d3630215859a4f7ae76"}
 EOF
 FVD_DEMO_OUT="$FX/out-c" FVD_LEDGER_PATH="$FIXP/ledger-compliant.md" python3 "$DEMO/run.py" "$FX/cand-compliant.json" > "$FX/c.log" 2>&1
 crc=$?

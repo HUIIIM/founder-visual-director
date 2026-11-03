@@ -191,6 +191,7 @@ def main():
         "styling": inp.get("styling"),
         "asset_id": inp.get("asset_id"),
         "asset_grade": inp.get("asset_grade"),
+        "image_sha256": inp.get("image_sha256"),
         "uses_standard_portrait": inp.get("uses_standard_portrait", False),
         "model_id": inp.get("model_id"),
         "model_consent_status": inp.get("model_consent_status"),

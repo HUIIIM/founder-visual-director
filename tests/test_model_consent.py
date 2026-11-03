@@ -26,7 +26,8 @@ def entry(ledger_id, **kw):
 
 def candidate(**kw):
     base = {"platform": "小红书", "date": "2026-10-26", "scene_category": "户外运动", "outfit": "new",
-            "styling": "new", "asset_id": "a-new", "asset_grade": "A", "uses_standard_portrait": False}
+            "styling": "new", "asset_id": "a-new", "asset_grade": "A", "uses_standard_portrait": False,
+            "image_sha256": "f57d196a115ea44f2531b38d8c758498ffb15edba2735d3630215859a4f7ae76"}
     base.update(kw)
     return base
 

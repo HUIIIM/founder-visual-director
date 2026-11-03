@@ -148,7 +148,7 @@ def evaluate(entries, candidate, rules, defect_count=0):
         if gaps:
             unknown.append(f"条目 {','.join(gaps)} 缺{label}")
         for d, e in dated[:3]:
-            if e.get(field) == candidate.get(field):
+            if ledger_lib.normalize_key(e.get(field)) == ledger_lib.normalize_key(candidate.get(field)):
                 hit.append(f"相邻 3 篇内{label}重复：{e.get(field)}（{e.get('ledger_id')}，{d.isoformat()}）")
     findings.extend(hit)
     checks.append(_check_line("相邻 3 篇", hit, unknown))
@@ -166,7 +166,7 @@ def evaluate(entries, candidate, rules, defect_count=0):
             unknown.append(f"14 天内条目 {','.join(gaps)} 缺场景大类")
         for d, e in dated:
             delta = abs((cand_date - d).days)
-            if e.get("scene_category") == cat and delta < 14:
+            if ledger_lib.normalize_key(e.get("scene_category")) == ledger_lib.normalize_key(cat) and delta < 14:
                 hit.append(f"同场景大类 {cat} 距 {e.get('ledger_id')} 仅 {delta} 天（{d.isoformat()}）")
     findings.extend(hit)
     checks.append(_check_line("14 天同大类", hit, unknown))
@@ -177,11 +177,13 @@ def evaluate(entries, candidate, rules, defect_count=0):
     if not asset:
         unknown.append("候选缺 asset_id")
     else:
-        gaps = missing_in(dated, "asset_id")
+        # 冷却期不分平台（rotation-rules.md「同一 ID 在冷却期内不得重复使用」；#41：换平台复用曾绕过）
+        dated_all = sorted(((d, e) for d, p, e in usable_any), key=lambda t: t[0], reverse=True)
+        gaps = missing_in(dated_all, "asset_id")
         if gaps:
             unknown.append(f"条目 {','.join(gaps)} 缺 asset_id")
-        for d, e in dated:
-            if e.get("asset_id") == asset:
+        for d, e in dated_all:
+            if ledger_lib.normalize_asset_id(e.get("asset_id")) == ledger_lib.normalize_asset_id(asset):
                 need = cooldowns.get(e.get("asset_grade"))
                 if need is None:
                     unknown.append(f"条目 {e.get('ledger_id')} 等级缺失或非法，冷却天数无从确定")
@@ -284,6 +286,25 @@ def evaluate(entries, candidate, rules, defect_count=0):
                 break
     findings.extend(hit)
     checks.append(_check_line("模特资产授权", hit, unknown))
+
+    # 检查 7：已发布图永久退役（SKILL.md § 红线：凡已发布用过的图永久退役，含跨平台复用）。
+    # 判定对象是产物图本身（image_sha256，ledger-format.md「一图一记录」字段），不是可在冷却期后
+    # 复用的素材 asset_id：任一已发布/已退役条目登记了同一哈希即违规，不分平台、不看日期（#41）。
+    hit, unknown = [], []
+    digest = ledger_lib.normalize_key(candidate.get("image_sha256"))
+    if not digest:
+        unknown.append("候选缺 image_sha256，已发布图是否被复用无法机判（须人工确认）")
+    else:
+        for e in entries:
+            if not isinstance(e, dict) or e.get("status") not in ("已发布", "已退役"):
+                continue
+            if ledger_lib.normalize_key(e.get("image_sha256")) == digest:
+                hit.append(
+                    f"该图已发布过（条目 {_shown(e.get('ledger_id'))}，{_shown(e.get('platform'))}），"
+                    "已发布图永久退役，不得二次使用"
+                )
+    findings.extend(hit)
+    checks.append(_check_line("已发布图永久退役", hit, unknown))
 
     if findings:
         verdict = "违规"
