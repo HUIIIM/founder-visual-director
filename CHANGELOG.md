@@ -17,7 +17,7 @@ Versions follow git tags from v1.1.0 on (releases carry an SBOM, Sigstore signat
 
 ## [1.1.0] - 2026-11-03
 
-> 2026-10-30 定稿，2026-11-03 发布（标签 `v1.1.0` 在 `0c8e6da`）。#23 的四条修复与 #32 P2-8 随包发出、原先误留在 [Unreleased] 或漏记，已补入本节；重复条目已合并（#43）。 / Cut 2026-10-30, released 2026-11-03; entries that shipped but were missing or left under [Unreleased] are reconciled here.
+> 2026-10-30 定稿，2026-11-03 发布（标签 `v1.1.0` 在 `0c8e6da`）。#23 的四条修复误留在 [Unreleased]、#32 P2-8 与 #18 / #19 / #24 / #28 的 CI 与协作改动漏记，均随包发出，已补入本节；重复条目已合并（#43）。 / Cut 2026-10-30, released 2026-11-03; shipped entries that were missing or left under [Unreleased] are reconciled here.
 
 ### Added
 - 发布前动作增加替代文本（alt text）要求，QA 检查表增加对应勾选项；README 写明 OpenSSF Scorecard 公开分（2026-10-30 为 6.9 / 10）及未达项。 / Alt-text step before publishing; README states the public Scorecard score.
@@ -40,14 +40,13 @@ Versions follow git tags from v1.1.0 on (releases carry an SBOM, Sigstore signat
 - `scripts/validate_skill.py` + `tests/`：skill 包校验与单元测试（frontmatter 规范、引用路径存在、SKILL.md 内联强制短语/否定词带与 prompt-standards.md 一致、evals.json 格式）。 / Skill-package validator with unit tests.
 - `evals/evals.json`：7 例评测集（skill-creator 格式，带断言）。 / 7-case eval set.
 - CI `tests.yml`：每个 PR 跑单元测试与 skill 包校验。 / Unit-test and skill-validation CI.
+- Claude 直连工作流 `.github/workflows/claude.yml`（#24）与仓内协作规则 `CLAUDE.md` / `LOOP.md`（#18）。 / Claude direct-loop workflow and in-repo working rules.
 
 ### Changed
 - SKILL.md frontmatter 改为 Agent Skills 规范字段（name / description / license / compatibility / metadata），原 `version`、`user_invocable`、`triggers`、`requires`、`inputs`、`safety` 移入 `metadata`；版本号 1.1.0 与正文「v1.1 新增三章」对齐（尚未打 tag）。description 补英文触发词。 / Spec-compliant frontmatter; version 1.1.0.
 - Step 4 增加重生成上限：同一方案连续 3 次整单打回即停，回 Step 2 改方案并记录次数与成本。 / Regeneration is capped at 3 full rejections per plan.
 - `evals/smoke-01.md` 与 `evals/work/*.txt` 删除人物外貌/年龄描述与本地照片文件名（替换为中性说明）。 / Personal appearance details and photo filenames redacted from eval records.
-- README Author 小节：以 N=1 标准表述替换已停用的采购定位。 / Author section: retired procurement positioning replaced with the N=1 line.
-## 2026-10-07
-- README 重构：首屏 slogan 与导航、Demo 区、使用场景表、FAQ、License 白话表。 / README restructure: hook, nav, demo, scenarios, FAQ, plain-language license table.
+- CI 权限与时限：dependency-review 的 `pull-requests: write` 收到 job 级、README 分支保护表述更正（#19，SEC-6）；`claude.yml` 加 `timeout-minutes`（#28，SEC-8）。 / Least-privilege dependency-review permissions; job timeout on the Claude workflow.
 
 ### Fixed
 - 面部一致性校验在空台账或全部条目已退役时不再报「通过」，改为「无法判定」（退出码 2）（#23 第 1 项）。 / Face check on an empty or all-retired ledger is "cannot judge", not a pass.
@@ -65,8 +64,17 @@ Versions follow git tags from v1.1.0 on (releases carry an SBOM, Sigstore signat
 - demo 按 skill 规则飞行（issue #6 P0）：`demo/run.py` 运行时直读 references 的强制短语、固定否定词带与禁用词表 v1.0，删除内置的另一套否定词/禁用词副本；冲突审计、面部描述检查、B 级严审均为真判定（原冲突审计为写死的"通过"，原 demo 自身 prompt 含禁用词 `cinematic` 与面部/年龄描述）；`demo/eval.sh` 在 prompt 被打回时真 FAIL（原实现被拒仍打印 PASS），并内置两个"必被拒"回归夹具。 / Demo now loads its rules from references at runtime; eval truly fails on rejection.
 - gitleaks workflow 增加 `pull-requests: read` 权限，避免在 PR 上列取提交时 403。 / gitleaks workflow gains `pull-requests: read` so PR scans don't 403.
 - SKILL.md 规则矛盾（issue #6 超出条款 6）：Step 3-5「视线不直视镜头」改为随脸角度预设（摆拍可给镜头）；品牌风格词 "dark cinematic" 与禁用词 `cinematic` 的关系写明（风格词不进 prompt）；「拼版 + 分层 PNG」标明为渲染阶段交付，不替代三部分输出契约。 / Rule contradictions resolved.
-## 2026-10-14
 - 台账文本（`ledger_id` 等）在报告里单行化，伪造不了「- 结论：」行（#32 P2-8，`30de7e4`）；此前只有候选文本做了处理。 / Ledger text can no longer forge the verdict line.
+
+## 2026-10-14
+
+### Changed
+- README Author 小节：以 N=1 标准表述替换已停用的采购定位。 / Author section: retired procurement positioning replaced with the N=1 line.
+
+## 2026-10-07
+
+### Changed
+- README 重构：首屏 slogan 与导航、Demo 区、使用场景表、FAQ、License 白话表。 / README restructure: hook, nav, demo, scenarios, FAQ, plain-language license table.
 
 ## [1.0.0] - 2026-10-06
 

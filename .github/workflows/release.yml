@@ -37,8 +37,9 @@ jobs:
           # #43: everything that ships must be listed under its version, or the release notes
           # (cut from the [$version] section below) silently omit it.
           # Any non-blank, non-sub-heading line counts (`- `, `* `, indented, numbered, prose);
-          # the heading is matched case-insensitively, with or without brackets (#53 P2-1).
-          pending="$(awk 'tolower($0) ~ /^## +\[?unreleased\]?/ {f=1; next} f && /^## / {exit} f' CHANGELOG.md | grep -cvE '^[[:space:]]*(#{3,}.*)?$' || true)"
+          # any Unreleased heading counts (any level, spacing, case, ASCII or full-width
+          # brackets), and every such section is counted, not only the first (#53 P2-1/P2-2).
+          pending="$(awk 'tolower($0) ~ /^[[:space:]]*#+[[:space:]]*(\[|［)?[[:space:]]*unreleased/ {f=1; next} /^[[:space:]]*##?[[:space:]]/ {f=0} f' CHANGELOG.md | grep -cvE '^[[:space:]]*(#{3,}.*)?$' || true)"
           [ "$pending" = "0" ] || { echo "::error::CHANGELOG.md [Unreleased] still lists $pending entries; move them into [$version] before tagging"; exit 1; }
       - name: Tag must point at a commit on main
         run: |
