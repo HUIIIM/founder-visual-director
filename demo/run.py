@@ -27,7 +27,8 @@ from datetime import date as _date
 DEMO = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(DEMO)
 STANDARDS = os.path.join(SKILL, "references", "prompt-standards.md")
-WHITE_PORTRAIT_WORDS = ["标准照", "标准头像", "证件照", "standard portrait", "standard avatar", "id photo"]
+WHITE_PORTRAIT_WORDS = ["标准照", "标准头像", "standard portrait", "standard avatar"]  # 硬拦（与 v0.1 相同）
+REVIEW_PORTRAIT_WORDS = ["证件照", "id photo", "passport photo"]  # 第二档：转人工复核
 # 白底场景词：中文 + 英文对译（#42：white backdrop / white seamless 原先漏判）
 PORTRAIT_WORDS = ["portrait", "headshot", "头像", "半身照", "肖像"]
 # 只有真正的白底词才把「人像」判成白底标准照；棚拍本身不等于白底（暗调棚拍是品牌美术方向，#46 第 6 轮）
@@ -40,7 +41,7 @@ WHITE_BG_PATTERNS = [
     r"纯白墙",
     r"白墙(前|背景|面前)",
     r"(?<![\w-])white[\s-]+(background|backdrop|seamless)\b",
-    r"\bagainst an? (plain )?white wall\b",
+    r"\b(against|on|in front of) an? (plain )?white wall\b",
     r"\bplain white studio\b",
 ]
 WHITE_BG_WORDS = ["白底", "白色背景", "white background", "white backdrop", "white seamless"]
@@ -93,8 +94,23 @@ def load_rules():
                           [t.strip() for t in right.split("|") if t.strip()]))
     b_triggers = [t.strip() for chunk in appendix.get("b_level_triggers", [])
                   for t in chunk.split(",") if t.strip()]
-    banned += [t.strip() for chunk in appendix.get("extra_banned", []) for t in chunk.split(",") if t.strip()]
+
+    def words(name):
+        return [t.strip() for chunk in appendix.get(name, []) for t in chunk.split(",") if t.strip()]
+
+    # 第二档：只转人工复核、不硬拦的 v0.2 补充词条（#46，见附表说明）
+    review = {
+        "banned": words("review_banned"),
+        "face_words": words("review_face_words"),
+        "age_patterns": appendix.get("review_age_patterns", []),
+        "b_triggers": words("review_b_level_triggers"),
+    }
+    global REVIEW_RULES
+    REVIEW_RULES = review
     return phrases, negative, banned, face_words, age_patterns, pairs, b_triggers
+
+
+REVIEW_RULES = {}
 
 
 def normalize_text(text):
@@ -244,8 +260,21 @@ def main():
     for phrase in NOT_PORTRAIT:
         scene_np = scene_np.replace(phrase, " ")
     portrait = [w for w in PORTRAIT_WORDS if _word_in(w, scene_np)]
+    review_white = [w for w in REVIEW_PORTRAIT_WORDS if _word_in(w, scene_l)]
     if white_scene and portrait:
-        white_hits.append(f"{white_scene[0]} + {portrait[0]}")
+        review_white.append(f"{white_scene[0]} + {portrait[0]}")
+    # 第二档（v0.2 补充词条）：命中只转人工复核，终判上限条件通过（#46）
+    rv = REVIEW_RULES
+    review = []
+    for label, hits in (
+        ("疑似禁用词", hits_in(positive, rv.get("banned", []))),
+        ("疑似面部描述", hits_in(masked, rv.get("face_words", []))),
+        ("疑似年龄描述", [p for p in rv.get("age_patterns", []) if re.search(p, normalize_text(masked), re.IGNORECASE)]),
+        ("疑似 B 级情形（真实可识别人物）", hits_in(scene + " " + theme, rv.get("b_triggers", []))),
+        ("疑似白底标准照", review_white),
+    ):
+        if hits:
+            review.append(label + "：" + ",".join(hits))
     if inp.get("uses_standard_portrait") is True:
         white_hits.append("uses_standard_portrait")
 
@@ -296,11 +325,15 @@ def main():
     if rot_code == 1:
         reasons.append("轮换违规（见 rotation.md 违规明细；prompt 待场景确认，不可投产）")
     rejected = bool(reasons)
-    conditional = not rejected and rot_code != 0
+    conditional = not rejected and (rot_code != 0 or bool(review))
     if rejected:
         verdict = "打回（" + "；".join(reasons) + "）"
     elif conditional:
-        verdict = f"条件通过（轮换预检：{rot_verdict}；须补台账或人工复核后才可发布，不得当作通过）"
+        if not review:
+            verdict = f"条件通过（轮换预检：{rot_verdict}；须补台账或人工复核后才可发布，不得当作通过）"
+        else:
+            rot_part = f"；轮换预检：{rot_verdict}" if rot_code != 0 else ""
+            verdict = f"条件通过（人工复核：{'；'.join(review)}{rot_part}；须人工复核后才可发布，不得当作通过）"
     else:
         verdict = "通过"
 

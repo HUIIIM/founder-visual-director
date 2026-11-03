@@ -1,8 +1,13 @@
-"""Rule-table bypass probes (#42; independent SOTA assessment #6 round 2, beyond-rubric 3 and 6).
+"""Rule-table bypass probes and the two-tier design (#42, #46; SOTA #6 round 2, beyond-rubric 3/6).
 
-Each probe passed demo/run.py on main @32466b7 although the rule it dodges is in SKILL.md or
-references/prompt-standards.md. They must now be rejected (exit 3), while benign scenes still
-get through (exit 0 pass or 5 conditional pass), and the QA checklist must carry every item.
+Each probe passed demo/run.py on main although the rule it dodges is in SKILL.md or
+references/prompt-standards.md. Rounds 6-9 of the independent assessment showed that hard-
+rejecting every rewording keeps rejecting normal founder scenes, so the table has two tiers:
+
+- HARD_PROBES: forms of the v0.1 rules themselves (normalised), rejected with exit 3.
+- REVIEW_PROBES: v0.2 rewordings, flagged 「人工复核：疑似…」 and capped at 条件通过 (exit 5).
+- BENIGN and CORPUS: never hard-rejected; BENIGN is never even flagged; the realistic corpus has
+  a review-rate ceiling, so proportionality is checked by CI instead of argued each round.
 """
 
 import json
@@ -17,9 +22,17 @@ RUN = os.path.join(ROOT, "demo", "run.py")
 with open(os.path.join(ROOT, "demo", "input.json"), encoding="utf-8") as _f:
     BASE = json.load(_f)
 
-BYPASS_PROBES = {
-    "电影感 天台上的清晨": "banned: cinematic (中文对应)",
+HARD_PROBES = {
     "Cinematic-lighting rooftop at dawn": "banned: cinematic lighting, hyphenated",
+    "cine\u200bmatic rooftop at dawn": "banned word split by a zero-width space",
+    "\uff43inematic rooftop": "banned word, full-width letter",
+    "smiling founder at a cafe": "face word (v0.1)",
+    "与名人合影的晚宴": "B-level (v0.1)",
+    "白底标准照作为封面": "white-background standard portrait (v0.1)",
+}
+
+REVIEW_PROBES = {
+    "电影感 天台上的清晨": "banned: cinematic (中文对应)",
     "a founder in his thirties at a desk": "age in words",
     "thirty-something founder working late": "age in words",
     "四十多岁的创始人在书房": "age in Chinese words",
@@ -48,7 +61,6 @@ BYPASS_PROBES = {
     "白色背景前的证件照": "white-background standard portrait, Chinese",
     "white-background headshot": "white-background standard portrait, hyphenated",
     "headshot against a plain white wall": "white-background standard portrait, plain white",
-    "cine\u200bmatic rooftop at dawn": "banned word split by a zero-width space",
     # Round 7: the narrowed rules must still catch the real thing.
     "中年男人在书房": "age: 中年 as a person",
     "四十岁的创始人在书房": "age, Chinese numerals, the founder's own",
@@ -57,6 +69,10 @@ BYPASS_PROBES = {
     "白墙前的创始人半身照": "white-background portrait: 白墙前",
     "纯白背景的创始人头像": "white-background portrait: 纯白背景",
     "创始人今年四十岁，在书房": "age: the founder's own, subject first",
+    # Round 9: the founder's own age and white-wall forms the round-8 rules missed.
+    "三十五岁女创始人在书房": "age: 女创始人",
+    "四十岁出头的创始人": "age: 岁出头",
+    "founder headshot on a white wall": "white-background portrait: on a white wall",
 }
 
 BENIGN = [
@@ -108,18 +124,72 @@ def run_demo(scene):
         return proc.returncode, proc.stdout, checklist
 
 
+REVIEW_MARK = "人工复核：疑似"
+# Realistic founder content-calendar scenes; the second half deliberately uses trigger
+# vocabulary in a benign sense (round 9 of the assessment). None may be hard-rejected.
+CORPUS = [
+    # work
+    "创始人在共享办公区敲键盘", "仓库里清点新到的样品", "团队白板前讨论产品路线图", "深夜书房里改融资 deck",
+    "founder reviewing a prototype on the workbench", "standing desk by the window, founder reading contracts",
+    "团队晨会，大家说说笑笑", "年会现场，欢声笑语", "路演前在后台候场", "酒店宴会厅改成的路演会场",
+    "founder speaking at a startup gala", "founder hosting a dinner party for the team at home",
+    "明星产品发布会后台", "voice actor recording session for the brand podcast", "红毯式入口的展会现场",
+    "工厂车间里和工人讨论工艺", "咖啡馆角落写周报", "founder on a video call in a quiet meeting room",
+    # family
+    "创始人和三岁的儿子在客厅搭乐高", "创始人和两岁的女儿在公园散步", "她陪五岁的女儿在公园放风筝",
+    "他和七岁的女儿在海边捡贝壳", "她带着三岁的儿子逛菜市场", "其他三岁小孩在游乐场，创始人坐在长椅上",
+    "周末和家人在厨房包饺子", "创始人25岁那年创业的第一间办公室，如今改成了会议室",
+    "女儿两岁生日，创始人在家", "孩子三岁那年创办公司的创始人在书房",
+    # travel / city
+    "founder walking through the famous Tsukiji outer market", "a cafe famous for its pour-over, founder at the bar",
+    "目光所及之处是整座城市的夜景", "高铁上用笔记本处理邮件", "机场贵宾室候机", "老城区巷子里散步",
+    "forties-era jazz bar after a client dinner", "founder portrait in a sixties-style lounge",
+    "东京街头的便利店门口", "海边日落时分的木栈道",
+    # sport / life
+    "城市晨跑后拉伸", "健身房里做硬拉", "周末徒步登山，山顶休息", "雨天在书店翻书",
+    "早餐桌上读报纸", "在阳台给植物浇水", "骑行通勤穿过公园", "游泳馆出水的瞬间",
+    "戴眼镜的创始人在窗边看书", "黑白墙绘前的创始人半身照", "off-white wall behind a founder portrait",
+    "founder in a plain white t-shirt, portrait orientation", "暗调棚拍肖像，低调布光", "书房夜景，grind 叙事",
+    "the daily grind at a co-working desk", "人群中年轻的创业者围坐讨论",
+]
+
+REVIEW_RATE_CEILING = 0.30
+
+
 class BypassProbes(unittest.TestCase):
-    def test_probes_are_rejected(self):
-        for scene, why in BYPASS_PROBES.items():
+    def test_hard_probes_are_rejected(self):
+        for scene, why in HARD_PROBES.items():
             with self.subTest(scene=scene, why=why):
                 rc, out, _ = run_demo(scene)
                 self.assertEqual(rc, 3, f"{why}: expected reject (3), got {rc}\n{out[-400:]}")
 
-    def test_benign_scenes_are_not_rejected(self):
+    def test_review_probes_are_flagged_not_passed(self):
+        for scene, why in REVIEW_PROBES.items():
+            with self.subTest(scene=scene, why=why):
+                rc, out, _ = run_demo(scene)
+                self.assertEqual(rc, 5, f"{why}: expected conditional (5), got {rc}\n{out[-400:]}")
+                self.assertIn(REVIEW_MARK, out, why)
+
+    def test_benign_scenes_are_neither_rejected_nor_flagged(self):
         for scene in BENIGN:
             with self.subTest(scene=scene):
                 rc, out, _ = run_demo(scene)
                 self.assertIn(rc, (0, 5), out[-400:])
+                self.assertNotIn(REVIEW_MARK, out)
+
+
+class Proportionality(unittest.TestCase):
+    def test_realistic_corpus_has_no_hard_rejects_and_a_bounded_review_rate(self):
+        hard, flagged = [], []
+        for scene in CORPUS:
+            rc, out, _ = run_demo(scene)
+            if rc == 3:
+                hard.append(scene)
+            elif REVIEW_MARK in out:
+                flagged.append(scene)
+        self.assertEqual(hard, [], "a realistic scene was hard-rejected")
+        rate = len(flagged) / len(CORPUS)
+        self.assertLessEqual(rate, REVIEW_RATE_CEILING, f"review rate {rate:.0%}: {flagged}")
 
 
 class Checklist(unittest.TestCase):
