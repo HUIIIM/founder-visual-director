@@ -134,16 +134,26 @@ def _word_in(word, text):
 
 
 def hits_in(text, tokens):
-    """词表命中：拉丁词按词边界（不分大小写，空白/连字符等价），中文按子串。"""
-    text = normalize_text(text)
+    """词表命中：拉丁词按词边界（不分大小写，空白/连字符等价），中文按子串。
+
+    原文与归一化文本**任一**命中即算（#46 第 11 轮）：归一化会删掉夹在两个词之间的零宽字符、
+    把 ™ 折成 TM，从而吃掉 v0.1 依赖的词边界；只比归一化文本会让硬拦比 main 松。
+    """
+    variants = (text, normalize_text(text))
     out = []
     for tok in tokens:
         if re.search(r"[^\x00-\xff]", tok):
-            if tok in text:
+            if any(tok in v for v in variants):
                 out.append(tok)
-        elif re.search(_latin_pattern(tok), text, re.IGNORECASE):
+        elif any(re.search(_latin_pattern(tok), v, re.IGNORECASE) for v in variants):
             out.append(tok)
     return out
+
+
+def pattern_hits(patterns, text):
+    """正则词条：原文与归一化文本任一命中即算（同 hits_in）。"""
+    variants = (text, normalize_text(text))
+    return [p for p in patterns if any(re.search(p, v, re.IGNORECASE) for v in variants)]
 
 
 CHECKLIST_SOURCES = [
@@ -240,7 +250,7 @@ def main():
     for ph in phrases:
         masked = masked.replace(ph, " ")
     face_hits = hits_in(masked, face_words)
-    age_hits = [p for p in age_patterns if re.search(p, normalize_text(masked), re.IGNORECASE)]
+    age_hits = pattern_hits(age_patterns, masked)
     # 检查三：冲突审计（互斥对，真判定：同对两边同时出现即冲突）
     conflicts = []
     scan_all = positive + " " + scene
@@ -271,7 +281,7 @@ def main():
     for label, hits in (
         ("疑似禁用词", hits_in(positive, rv.get("banned", []))),
         ("疑似面部描述", hits_in(masked, rv.get("face_words", []))),
-        ("疑似年龄描述", [p for p in rv.get("age_patterns", []) if re.search(p, normalize_text(masked), re.IGNORECASE)]),
+        ("疑似年龄描述", pattern_hits(rv.get("age_patterns", []), masked)),
         ("疑似 B 级情形（真实可识别人物）", hits_in(scene + " " + theme, rv.get("b_triggers", []))),
         ("疑似白底标准照", review_white),
     ):

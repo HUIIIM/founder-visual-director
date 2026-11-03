@@ -32,6 +32,8 @@ HARD_PROBES = {
     "白底标准照作为封面": "white-background standard portrait (v0.1)",
     "standard portraits of the founder as the banner": "standard portrait, plural (round 10)",
     "standard avatars grid": "standard avatar, plural (round 10)",
+    "城市晨跑后拉伸, cinematic\u200blighting": "banned word glued to the next by a zero-width space (round 11)",
+    "城市晨跑后拉伸, celebrity\u2122 cameo": "B-level token followed by ™ (round 11)",
 }
 
 REVIEW_PROBES = {
@@ -206,7 +208,11 @@ class HardTierNotLooserThanMain(unittest.TestCase):
         white = demo_run.WHITE_PORTRAIT_WORDS
         looser = []
         for tok in banned + face_words + b_triggers + white:
-            for scene in (f"{tok}s at the office", f"{tok.upper()} at the office", f"founder {tok} today"):
+            variants = [f"{tok}s at the office", f"{tok.upper()} at the office", f"founder {tok} today"]
+            # Round 11: characters that normalisation deletes or folds, next to the token.
+            for ch in ("\u200b", "\u200c", "\u200d", "\u2060", "\ufeff", "\u00ad", "\u2122", "\u2120"):
+                variants += [f"founder {tok}{ch}today", f"founder today{ch}{tok} shot"]
+            for scene in variants:
                 main_rejects = (
                     _main_hits(scene, banned + face_words + b_triggers)
                     or any(w in scene.lower() for w in white)
