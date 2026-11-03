@@ -268,6 +268,20 @@ def evaluate(entries, candidate, rules, defect_count=0):
         recorded = consent or any(e.get("model_consent_status") for e in same_model)
         if not recorded and not hit:
             unknown.append(f"model_id {_shown(model_id)} 在候选与台账中都没有授权状态")
+    # 台账里任一条目的 model_id / 授权状态本身不合法，就无法确认它记的不是这个模特的撤销：
+    # 本行判「无法判定」，不印「通过」（#37 第 6 轮）。
+    if not hit:
+        for e in entries:
+            if not isinstance(e, dict):
+                continue
+            mid, cst = e.get("model_id"), e.get("model_consent_status")
+            bad_id = mid is not None and not (
+                isinstance(mid, str) and ledger_lib.MODEL_ID_RE.match(ledger_lib.normalize_model_id(mid) or "")
+            )
+            bad_status = cst is not None and cst not in ledger_lib.MODEL_CONSENT_STATUSES
+            if bad_id or bad_status:
+                unknown.append(f"台账条目 {_shown(e.get('ledger_id'))} 的 model_id 或授权状态不合法，无法确认其授权记录")
+                break
     findings.extend(hit)
     checks.append(_check_line("模特资产授权", hit, unknown))
 

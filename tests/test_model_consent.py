@@ -116,6 +116,14 @@ class ModelConsent(unittest.TestCase):
             any("model_id" in p for p in ledger_lib.validate_entry(entry("p1", model_id=" Miao-V1"), 0))
         )
 
+    def test_consent_line_is_not_pass_when_a_ledger_record_is_malformed(self):
+        # IVV round 6: the verdict was capped, but the consent line itself still printed 通过.
+        for kw in ({"model_id": "miao\uff0dv1"}, {"model_consent_status": "Revoked"}):
+            with self.subTest(**{k: repr(v) for k, v in kw.items()}):
+                ledger = [entry("p1"), entry("p0", status="已退役", **kw)]
+                _, line = consent_line(ledger, candidate(model_id="miao-v1", model_consent_status="active"))
+                self.assertIn("无法判定", line)
+
     def test_none_variant_spelling_is_none(self):
         verdict, _ = consent_line([entry("p1")], candidate(model_id=" None "))
         self.assertEqual(verdict, "通过")
