@@ -88,6 +88,16 @@ class PermanentRetirement(unittest.TestCase):
         self.assertEqual(code, 4, report)
         self.assertIn("无法判定", line(report, "已发布图永久退役"))
 
+    def test_published_entries_without_hash_are_cannot_judge_not_pass(self):
+        # #49 round 1: a ledger whose published entries carry no image_sha256 gave 通过 (vacuous).
+        entries = compliant_ledger()
+        for e in entries:
+            e.pop("image_sha256")
+        code, report = run(compliant_candidate(), entries)
+        self.assertEqual(code, 4, report)
+        self.assertIn("无法判定", line(report, "已发布图永久退役"))
+        self.assertIn("缺 image_sha256", report)
+
     def test_malformed_hash_is_a_candidate_problem(self):
         code, report = run(compliant_candidate(image_sha256="not-a-hash"))
         self.assertNotEqual(code, 0, report)
@@ -114,7 +124,7 @@ class KeyNormalisation(unittest.TestCase):
         self.assertIn("违规", line(report, "冷却期"))
 
     def test_outfit_variants_hit_adjacent_three(self):
-        for variant in ("藏青西装外套+白衬衫  ", "藏青西装外套＋白衬衫"):
+        for variant in ("藏青西装外套+白衬衫  ", "藏青西装外套＋白衬衫", "藏青西装外套 + 白衬衫", "藏青西装外套、白衬衫"):
             with self.subTest(variant=variant):
                 code, report = run(compliant_candidate(outfit=variant))
                 self.assertEqual(code, 1, report)

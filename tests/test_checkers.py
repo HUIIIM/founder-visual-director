@@ -33,6 +33,7 @@ def entry(ledger_id, date, **kw):
         "model_id": "miao-v1", "status": "已发布", "ai_generated": True,
         "ai_disclosure_text": "本图由 AI 生成", "ai_disclosure_method": "platform_declaration",
         "ai_disclosure_basis": "标识办法",
+        "image_sha256": hashlib.sha256(f"image-{ledger_id}".encode()).hexdigest(),
     }
     base.update(kw)
     return base

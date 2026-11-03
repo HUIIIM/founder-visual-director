@@ -189,12 +189,15 @@ def normalize_key(value):
 
     Zero-width characters and soft hyphens are dropped, NFKC folds full-width forms
     (「＋」→「+」, 「ｘｈｓ」→「xhs」), whitespace runs collapse to one space, and case is
-    folded. "XHS-ASSET-009", "xhs-asset-009 " and "ｘｈｓ－ａｓｓｅｔ－００９" are one key.
+    folded; outfit separators (+ 、 / & ,) become "+" with no spaces around them.
+    "XHS-ASSET-009", "xhs-asset-009 " and "ｘｈｓ－ａｓｓｅｔ－００９" are one key.
     Non-strings and empty strings → None.
     """
     if not isinstance(value, str):
         return None
     text = unicodedata.normalize("NFKC", value.translate(ZERO_WIDTH))
+    # 搭配分隔符统一成「+」并去掉两侧空白：「外套 + 衬衫」「外套、衬衫」「外套/衬衫」是同一套（#49 第 1 轮 P2）
+    text = re.sub(r"\s*[+、/&,]\s*", "+", text)
     return re.sub(r"\s+", " ", text).strip().casefold() or None
 
 

@@ -83,7 +83,14 @@ def check_entry(entry, base_dir):
         elif not found:
             notes.append(f"{tag} reference_roles 摘要串无可识别角色，未做一致性比对")
     # 预留接口：一图一记录（候选，本轮只校验已登记的，不强制）
-    if entry.get("output_file") or entry.get("image_sha256"):
+    # image_sha256 可单独登记（它是轮换预检「已发布图永久退役」的判据，产物文件未必在本机，#49）；
+    # 登记了 output_file 就必须配哈希，两者都在时验存在性与哈希。
+    if entry.get("image_sha256") and not entry.get("output_file"):
+        if not SHA_RE.match(str(entry.get("image_sha256")).strip().lower()):
+            violations.append(f"{tag} image_sha256 不是 64 位十六进制")
+        else:
+            notes.append(f"{tag} 一图一记录：仅登记 image_sha256（未登记 output_file，产物哈希未在本机验证）")
+    elif entry.get("output_file") or entry.get("image_sha256"):
         out, digest = entry.get("output_file"), entry.get("image_sha256")
         if not out or not digest or not SHA_RE.match(str(digest or "")):
             violations.append(f"{tag} 已启用一图一记录字段但 output_file/image_sha256 不完整")
