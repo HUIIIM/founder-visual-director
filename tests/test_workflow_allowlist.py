@@ -115,6 +115,35 @@ class ClaudeWorkflowAllowlist(unittest.TestCase):
             self.assertIsNone(re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}", login), login)
         self.assertNotRegex(text, r"^\s*github_token:", "github_token would arm the non-write bypass")
 
+    def test_fragment_denies_for_abbreviated_options_and_environ(self):
+        # #51 round 3: git takes unique prefixes (--pathspec-fr), and GH_TOKEN is in the
+        # subprocess environment (/proc/self/environ); deny by fragment as well.
+        for rule in ("Bash(*pathspec*)", "Bash(*environ*)", "Bash(*/proc/*)"):
+            self.assertIn(rule, self.denied)
+
+    def test_event_runs_have_no_git_subcommand_that_reads_a_file(self):
+        # #51 round 3: git option abbreviations and shell quoting defeat any deny over the
+        # command text, and GH_TOKEN is in the subprocess env. Comment/issue runs therefore
+        # get no git subcommand that takes a file option and commit through the API.
+        with open(WORKFLOW, encoding="utf-8") as f:
+            text = f.read()
+        # Stdlib only (CI has no PyYAML): split the job into its claude-code-action steps.
+        blocks = re.split(r"\n      - name: ", text)
+        runs = [b for b in blocks if "anthropics/claude-code-action@" in b]
+        self.assertEqual(len(runs), 2, "expected one dispatch step and one event step")
+        conds = [re.search(r"^\s+if: (.+)$", b, re.MULTILINE).group(1).strip() for b in runs]
+        self.assertEqual(
+            sorted(conds),
+            sorted(["github.event_name == 'workflow_dispatch'", "github.event_name != 'workflow_dispatch'"]),
+        )
+        event = runs[conds.index("github.event_name != 'workflow_dispatch'")]
+        self.assertRegex(event, r"\n\s+use_commit_signing: true\b")
+        allowed = re.search(r'--allowedTools "([^"]*)"', event).group(1).split(",")
+        for rule in allowed:
+            self.assertNotRegex(rule, r"^Bash\(git (checkout|switch|add|commit|rm|push|restore|reset|stash)\b", rule)
+        for b in runs:
+            self.assertRegex(b, r'allowed_non_write_users: "-no-such-user-"')
+
     def test_turn_cap(self):
         # #44 item 2 (SOTA ARCH-4): the agent loop has a hard step bound.
         with open(WORKFLOW, encoding="utf-8") as f:
@@ -129,7 +158,8 @@ class ClaudeWorkflowAllowlist(unittest.TestCase):
         # src/modes/tag/index.ts and confirms the added tools reopen nothing, then updates it.
         with open(WORKFLOW, encoding="utf-8") as f:
             pins = re.findall(r"anthropics/claude-code-action@([0-9a-f]{40})", f.read())
-        self.assertEqual(pins, [REVIEWED_ACTION_SHA])
+        self.assertTrue(pins)
+        self.assertEqual(set(pins), {REVIEWED_ACTION_SHA})
 
 
 if __name__ == "__main__":

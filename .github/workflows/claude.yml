@@ -66,7 +66,16 @@ jobs:
           # its own push (and strips this header anyway, git-config.ts replaceCheckoutCredentials).
           persist-credentials: false
 
-      - name: Run Claude Code
+      # #51 round 3: two steps. git's own option parsing (unique-prefix abbreviations such as
+      # --pathspec-fr, bundled -qF, quote-split --path"spec-fr") lets any allowed git
+      # subcommand that takes a file option read a file for the agent, and GH_TOKEN sits in
+      # every subprocess environment (claude-code-action run.ts sets it). No deny list over
+      # the command text is sound against that, so comment/issue runs below get NO git
+      # subcommand that can read a file and commit through the action's API instead.
+      # This step is the maintainer-prompt path only (workflow_dispatch needs write access);
+      # it keeps the git CLI because API commits in agent mode target the dispatch branch.
+      - name: Run Claude Code (workflow_dispatch, maintainer prompt)
+        if: github.event_name == 'workflow_dispatch'
         uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -108,10 +117,30 @@ jobs:
           # (claude-code-action git-config.ts, no ALLOWED_NON_WRITE_USERS here), so Read of
           # .git/** is denied too. git itself can still read a file for the agent:
           # --pathspec-from-file=<path> echoes each line in its error output (#51 round 1),
-          # so that option is denied on every allowed git subcommand that takes it.
+          # so that option is denied on every allowed git subcommand that takes it, and by
+          # fragment (git accepts any unique prefix: --pathspec-fr), together with any command
+          # naming environ or /proc/ (#51 round 3: GH_TOKEN sits in the subprocess env).
           # `//` = absolute path in Claude Code rules. #44 item 2 (ARCH-4): --max-turns caps
           # the loop; timeout-minutes caps wall time.
           claude_args: >-
             --allowedTools "Read(./**),Glob,Grep,Write(./**),Edit(./**),Bash(git status),Bash(git diff),Bash(git diff --staged),Bash(git log --oneline -20),Bash(git rev-parse:*),Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git add:*),Bash(git commit:*),Bash(git push -u origin HEAD),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*)"
-            --disallowedTools "Edit(.git/**),Write(.git/**),Edit(**/.git/**),Write(**/.git/**),Read(.git/**),Read(**/.git/**),Edit(~/.gitconfig),Write(~/.gitconfig),Edit(~/.config/**),Write(~/.config/**),Read(//proc/**),Read(~/.claude/**),Bash(gh * --body-file*),Bash(gh * -F *),Bash(gh * -F*),Bash(git commit -F*),Bash(git commit * -F*),Bash(git commit --file*),Bash(git commit * --file*),Bash(git commit -t*),Bash(git commit * -t*),Bash(git commit --template*),Bash(git commit * --template*),Bash(*$(*),Bash(*`*),Bash(git checkout --pathspec-from-file*),Bash(git checkout * --pathspec-from-file*),Bash(git checkout --pathspec-file-nul*),Bash(git checkout * --pathspec-file-nul*),Bash(git commit --pathspec-from-file*),Bash(git commit * --pathspec-from-file*),Bash(git commit --pathspec-file-nul*),Bash(git commit * --pathspec-file-nul*),Bash(git add --pathspec-from-file*),Bash(git add * --pathspec-from-file*),Bash(git add --pathspec-file-nul*),Bash(git add * --pathspec-file-nul*),Bash(git rm --pathspec-from-file*),Bash(git rm * --pathspec-from-file*),Bash(git rm --pathspec-file-nul*),Bash(git rm * --pathspec-file-nul*),Bash(git switch --pathspec-from-file*),Bash(git switch * --pathspec-from-file*),Bash(git switch --pathspec-file-nul*),Bash(git switch * --pathspec-file-nul*)"
+            --disallowedTools "Edit(.git/**),Write(.git/**),Edit(**/.git/**),Write(**/.git/**),Read(.git/**),Read(**/.git/**),Edit(~/.gitconfig),Write(~/.gitconfig),Edit(~/.config/**),Write(~/.config/**),Read(//proc/**),Read(~/.claude/**),Bash(gh * --body-file*),Bash(gh * -F *),Bash(gh * -F*),Bash(git commit -F*),Bash(git commit * -F*),Bash(git commit --file*),Bash(git commit * --file*),Bash(git commit -t*),Bash(git commit * -t*),Bash(git commit --template*),Bash(git commit * --template*),Bash(*$(*),Bash(*`*),Bash(git checkout --pathspec-from-file*),Bash(git checkout * --pathspec-from-file*),Bash(git checkout --pathspec-file-nul*),Bash(git checkout * --pathspec-file-nul*),Bash(git commit --pathspec-from-file*),Bash(git commit * --pathspec-from-file*),Bash(git commit --pathspec-file-nul*),Bash(git commit * --pathspec-file-nul*),Bash(git add --pathspec-from-file*),Bash(git add * --pathspec-from-file*),Bash(git add --pathspec-file-nul*),Bash(git add * --pathspec-file-nul*),Bash(git rm --pathspec-from-file*),Bash(git rm * --pathspec-from-file*),Bash(git rm --pathspec-file-nul*),Bash(git rm * --pathspec-file-nul*),Bash(git switch --pathspec-from-file*),Bash(git switch * --pathspec-from-file*),Bash(git switch --pathspec-file-nul*),Bash(git switch * --pathspec-file-nul*),Bash(*pathspec*),Bash(*environ*),Bash(*/proc/*)"
+            --max-turns 40
+
+      - name: Run Claude Code (comment / issue events, API commits)
+        if: github.event_name != 'workflow_dispatch'
+        uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # #51 round 2: credential helper instead of a token in .git/config (see above).
+          allowed_non_write_users: "-no-such-user-"
+          # Commits go through mcp__github_file_ops__commit_files to the branch the action
+          # creates; tag mode then adds no Bash(git add/commit/rm:*) of its own.
+          use_commit_signing: true
+          prompt: ${{ inputs.prompt }}
+          # Same lists as the dispatch step above minus every git subcommand that takes a
+          # file option (checkout, switch, add, commit, rm, push); see the comments there.
+          claude_args: >-
+            --allowedTools "Read(./**),Glob,Grep,Write(./**),Edit(./**),Bash(git status),Bash(git diff),Bash(git diff --staged),Bash(git log --oneline -20),Bash(git rev-parse:*),Bash(git branch:*),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*)"
+            --disallowedTools "Edit(.git/**),Write(.git/**),Edit(**/.git/**),Write(**/.git/**),Read(.git/**),Read(**/.git/**),Edit(~/.gitconfig),Write(~/.gitconfig),Edit(~/.config/**),Write(~/.config/**),Read(//proc/**),Read(~/.claude/**),Bash(gh * --body-file*),Bash(gh * -F *),Bash(gh * -F*),Bash(git commit -F*),Bash(git commit * -F*),Bash(git commit --file*),Bash(git commit * --file*),Bash(git commit -t*),Bash(git commit * -t*),Bash(git commit --template*),Bash(git commit * --template*),Bash(*$(*),Bash(*`*),Bash(git checkout --pathspec-from-file*),Bash(git checkout * --pathspec-from-file*),Bash(git checkout --pathspec-file-nul*),Bash(git checkout * --pathspec-file-nul*),Bash(git commit --pathspec-from-file*),Bash(git commit * --pathspec-from-file*),Bash(git commit --pathspec-file-nul*),Bash(git commit * --pathspec-file-nul*),Bash(git add --pathspec-from-file*),Bash(git add * --pathspec-from-file*),Bash(git add --pathspec-file-nul*),Bash(git add * --pathspec-file-nul*),Bash(git rm --pathspec-from-file*),Bash(git rm * --pathspec-from-file*),Bash(git rm --pathspec-file-nul*),Bash(git rm * --pathspec-file-nul*),Bash(git switch --pathspec-from-file*),Bash(git switch * --pathspec-from-file*),Bash(git switch --pathspec-file-nul*),Bash(git switch * --pathspec-file-nul*),Bash(*pathspec*),Bash(*environ*),Bash(*/proc/*)"
             --max-turns 40
