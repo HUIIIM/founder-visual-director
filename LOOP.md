@@ -12,7 +12,8 @@ when one changes, the PR that changes it updates this file.
 ## Decisions in force
 
 - Release tags mark published skill versions; a merged release PR is
-  followed by its version tag on the merge commit.
+  followed by its version tag on the merge commit
+  (auto-tag mechanism, #31; details in `docs/RELEASING.md`).
 
 ## Acceptance rules
 
