@@ -62,6 +62,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
+          # #50: the job token never needs to sit in .git/config; the action authenticates
+          # its own push (and strips this header anyway, git-config.ts replaceCheckoutCredentials).
+          persist-credentials: false
 
       - name: Run Claude Code
         uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1
@@ -91,9 +94,11 @@ jobs:
           # or `-m "$(cat …)"` puts a file into a commit message that the allowed push
           # publishes. Tag mode adds Bash(git commit:*) itself, so these are denies too, and
           # any command substitution ($(…) or backticks) is denied outright.
-          # `//` = absolute path in Claude Code rules. #44 item 2 (ARCH-4): --max-turns caps
+          # #50: in tag mode the action writes its token into .git/config as the origin URL
+          # (claude-code-action git-config.ts, no ALLOWED_NON_WRITE_USERS here), so Read of
+          # .git/** is denied too. `//` = absolute path in Claude Code rules. #44 item 2 (ARCH-4): --max-turns caps
           # the loop; timeout-minutes caps wall time.
           claude_args: >-
             --allowedTools "Read(./**),Glob,Grep,Write(./**),Edit(./**),Bash(git status),Bash(git diff),Bash(git diff --staged),Bash(git log --oneline -20),Bash(git rev-parse:*),Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git add:*),Bash(git commit:*),Bash(git push -u origin HEAD),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*)"
-            --disallowedTools "Edit(.git/**),Write(.git/**),Edit(**/.git/**),Write(**/.git/**),Edit(~/.gitconfig),Write(~/.gitconfig),Edit(~/.config/**),Write(~/.config/**),Read(//proc/**),Read(~/.claude/**),Bash(gh * --body-file*),Bash(gh * -F *),Bash(gh * -F*),Bash(git commit -F*),Bash(git commit * -F*),Bash(git commit --file*),Bash(git commit * --file*),Bash(git commit -t*),Bash(git commit * -t*),Bash(git commit --template*),Bash(git commit * --template*),Bash(*$(*),Bash(*`*)"
+            --disallowedTools "Edit(.git/**),Write(.git/**),Edit(**/.git/**),Write(**/.git/**),Read(.git/**),Read(**/.git/**),Edit(~/.gitconfig),Write(~/.gitconfig),Edit(~/.config/**),Write(~/.config/**),Read(//proc/**),Read(~/.claude/**),Bash(gh * --body-file*),Bash(gh * -F *),Bash(gh * -F*),Bash(git commit -F*),Bash(git commit * -F*),Bash(git commit --file*),Bash(git commit * --file*),Bash(git commit -t*),Bash(git commit * -t*),Bash(git commit --template*),Bash(git commit * --template*),Bash(*$(*),Bash(*`*)"
             --max-turns 40

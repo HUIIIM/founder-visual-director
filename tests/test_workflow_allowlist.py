@@ -82,6 +82,14 @@ class ClaudeWorkflowAllowlist(unittest.TestCase):
         ):
             self.assertIn(rule, self.denied)
 
+    def test_git_dir_read_denied_and_checkout_keeps_no_token(self):
+        # #50: the action puts its token in .git/config (origin URL); tag mode's bare Read
+        # would otherwise reach it.
+        for rule in ("Read(.git/**)", "Read(**/.git/**)"):
+            self.assertIn(rule, self.denied)
+        with open(WORKFLOW, encoding="utf-8") as f:
+            self.assertRegex(f.read(), r"persist-credentials:\s*false")
+
     def test_turn_cap(self):
         # #44 item 2 (SOTA ARCH-4): the agent loop has a hard step bound.
         with open(WORKFLOW, encoding="utf-8") as f:
