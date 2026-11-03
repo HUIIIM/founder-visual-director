@@ -70,6 +70,18 @@ class ClaudeWorkflowAllowlist(unittest.TestCase):
         for rule in ("Read(//proc/**)", "Read(~/.claude/**)", "Bash(gh * --body-file*)", "Bash(gh * -F*)"):
             self.assertIn(rule, self.denied)
 
+    def test_git_commit_cannot_read_a_file_or_run_a_command(self):
+        # #47 round 7: commit message from a file (-F/--file/-t) or from $(…)/backticks, then
+        # the allowed push, is the same read-a-secret-and-publish chain as gh --body-file.
+        for rule in (
+            "Bash(git commit -F*)", "Bash(git commit * -F*)",
+            "Bash(git commit --file*)", "Bash(git commit * --file*)",
+            "Bash(git commit -t*)", "Bash(git commit * -t*)",
+            "Bash(git commit --template*)", "Bash(git commit * --template*)",
+            "Bash(*$(*)", "Bash(*`*)",
+        ):
+            self.assertIn(rule, self.denied)
+
     def test_turn_cap(self):
         # #44 item 2 (SOTA ARCH-4): the agent loop has a hard step bound.
         with open(WORKFLOW, encoding="utf-8") as f:
