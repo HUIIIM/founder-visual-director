@@ -98,6 +98,23 @@ class ClaudeWorkflowAllowlist(unittest.TestCase):
                 self.assertIn(f"Bash(git {cmd} {opt}*)", self.denied)
                 self.assertIn(f"Bash(git {cmd} * {opt}*)", self.denied)
 
+    def test_action_keeps_its_token_out_of_git_config(self):
+        # #51 round 2: a non-empty allowed_non_write_users switches claude-code-action to a
+        # credential helper (no token in the origin URL). The value must be a login GitHub
+        # cannot issue, and the workflow must not pass github_token (which would arm the
+        # action's permission bypass for listed users).
+        with open(WORKFLOW, encoding="utf-8") as f:
+            text = f.read()
+        m = re.search(r'allowed_non_write_users:\s*"([^"]*)"', text)
+        self.assertIsNotNone(m, "allowed_non_write_users is not set")
+        for login in m.group(1).split(","):
+            login = login.strip()
+            self.assertTrue(login, "empty entry")
+            self.assertNotEqual(login, "*")
+            # GitHub logins: alphanumerics and single hyphens, no leading/trailing hyphen.
+            self.assertIsNone(re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}", login), login)
+        self.assertNotRegex(text, r"^\s*github_token:", "github_token would arm the non-write bypass")
+
     def test_turn_cap(self):
         # #44 item 2 (SOTA ARCH-4): the agent loop has a hard step bound.
         with open(WORKFLOW, encoding="utf-8") as f:

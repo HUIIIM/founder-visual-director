@@ -70,6 +70,16 @@ jobs:
         uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # #51 round 2: keep the action's token out of .git/config. With this input empty,
+          # claude-code-action (d535f51, git-config.ts replaceCheckoutCredentials) writes
+          # https://x-access-token:<token>@… into the origin URL, and git options that read a
+          # file (--pathspec-from-file and its abbreviations, quoted forms, commit -F) can echo
+          # it back. Any non-empty value switches it to a credential helper that reads GH_TOKEN
+          # at auth time, and turns on subprocess env scrubbing + bubblewrap isolation.
+          # The value is a login GitHub can never issue (logins cannot start with a hyphen), so
+          # no one gains access: the action's bypass also needs github_token, which this
+          # workflow does not pass, and the `if:` trust gate above runs first.
+          allowed_non_write_users: "-no-such-user-"
           prompt: ${{ inputs.prompt }}
           # Tool allowlist (run 41365340458 had permission_denials_count=3 and
           # landed no artifacts): Write/Edit = create the deliverable files, the git
