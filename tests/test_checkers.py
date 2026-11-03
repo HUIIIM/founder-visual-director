@@ -281,11 +281,35 @@ class Issue23Leftovers(unittest.TestCase):
         self.assertLess(wf.index("git merge-base --is-ancestor"), wf.index("gh release create"))
 
     def test_release_refuses_pending_unreleased_entries(self):
-        # #43: v1.1.0 shipped four fixes that its release notes did not list.
+        # #43 / #53 P2-1: run the gate's exact shell line from release.yml against fixtures.
         with open(os.path.join(ROOT, ".github", "workflows", "release.yml"), encoding="utf-8") as f:
             wf = f.read()
-        self.assertIn("[Unreleased] still lists", wf)
         self.assertLess(wf.index("[Unreleased] still lists"), wf.index("gh release create"))
+        gate = next(ln.strip() for ln in wf.splitlines() if ln.strip().startswith('pending="$(awk'))
+        head = "# Changelog\n\n"
+        tail = "\n## [1.1.0] - 2026-11-03\n\n### Fixed\n- shipped\n"
+        cases = {
+            "## [Unreleased]\n": 0,
+            "## [Unreleased]\n\n### Fixed\n\n": 0,
+            "": 0,
+            "## [Unreleased]\n\n### Fixed\n- one\n": 1,
+            "## [Unreleased]\n\n* star entry\n+ plus entry\n": 2,
+            "## [Unreleased]\n\n  - indented\n1. numbered\n-noSpace\n": 3,
+            "## [Unreleased]\n\nA prose paragraph.\n": 1,
+            "## [unreleased]\n- lower case\n": 1,
+            "## Unreleased\n- no brackets\n": 1,
+            "## [Unreleased]\r\n- crlf\r\n": 1,
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            for body, want in cases.items():
+                with self.subTest(body=body):
+                    with open(os.path.join(tmp, "CHANGELOG.md"), "w", encoding="utf-8", newline="") as f:
+                        f.write(head + body + tail)
+                    out = subprocess.run(
+                        ["bash", "-eo", "pipefail", "-c", gate + '; echo "$pending"'],
+                        cwd=tmp, capture_output=True, text=True, check=True,
+                    ).stdout.strip()
+                    self.assertEqual(int(out), want, body)
 
 
 if __name__ == "__main__":
