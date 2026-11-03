@@ -37,7 +37,7 @@
 
 ## 边界与风险
 - 不做：图片渲染；真实可识别人物场景（转 B 级严审）；替代人类艺术指导——全尺寸人工目检仍是发布红线。
-- 已知限制：仅 1 份冒烟评估；demo 只到 prompt 级；依赖伴生 skill `founder-visual-studio` 与视觉规范 v1.6/v1.7（不在本仓库内）；`demo/README.md` 提到的 `demo/run.sh` 在仓库中不存在（应使用 `python3 demo/run.py`）。
+- 已知限制：仅 1 份冒烟评估；demo 只到 prompt 级；依赖伴生 skill `founder-visual-studio` 与视觉规范 v1.6/v1.7（不在本仓库内）。
 - 安全与隐私：skill 本身不上传数据；输入场景与台账均为本地文件，由调用者的 Claude 环境读取。所用模型/生图服务的数据处理取决于调用者自己的配置，未确认（TBD）。CI 中有 gitleaks 密钥扫描。
 
 ## 与其他 vertciti 产品的组合

@@ -41,7 +41,15 @@ cosign verify-blob founder-visual-director-X.Y.Z.tar.gz \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 # 来源证明：确认构建来自本仓库的 GitHub Actions
 gh attestation verify founder-visual-director-X.Y.Z.tar.gz --repo HUIIIM/founder-visual-director
+# 不装 cosign 时可用 sigstore-python（pip install sigstore），效果相同：
+python -m sigstore verify github founder-visual-director-X.Y.Z.tar.gz \
+  --bundle founder-visual-director-X.Y.Z.tar.gz.sigstore.json \
+  --cert-identity "https://github.com/HUIIIM/founder-visual-director/.github/workflows/release.yml@refs/tags/vX.Y.Z" \
+  --repository HUIIIM/founder-visual-director
 ```
+
+`git archive` 打出的源码包同样可复现：`git archive --format=tar.gz --prefix=founder-visual-director-X.Y.Z/ vX.Y.Z`
+的 SHA-256 应与发布页一致（v1.1.0 已逐字节复核，#30）。
 
 SBOM 可复现：在标签上设 `SOURCE_DATE_EPOCH=$(git log -1 --format=%ct vX.Y.Z)` 后运行
 `python3 scripts/make_sbom.py X.Y.Z out.json`，结果应与发布页的 `.cdx.json` 逐字节一致。
