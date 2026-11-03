@@ -111,7 +111,7 @@ def validate_entry(entry, idx):
         return [tag + " 不是对象"]
     lid = entry.get("ledger_id")
     if isinstance(lid, str) and lid:
-        tag = "条目 " + lid
+        tag = "条目 " + re.sub(r"\s+", " ", str(lid)).strip()  # 单行化：ledger_id 伪造不了报告行（#32 P2-8）
     problems = []
     for field in REQUIRED_FIELDS:
         value = entry.get(field)
@@ -155,6 +155,20 @@ def validate_entry(entry, idx):
     return problems
 
 
+MODEL_ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+
+
+def normalize_model_id(value):
+    """Canonical form for comparing model_id values: stripped, lower-case; non-strings → None.
+
+    Candidate and ledger are compared in this form, so "Miao-v1" or "miao-v1 " cannot slip
+    past a ledger entry that revoked "miao-v1" (#37 residual).
+    """
+    if not isinstance(value, str):
+        return None
+    return value.strip().lower() or None
+
+
 def validate_candidate(candidate):
     """候选（本次待检交付）字段校验，返回缺陷列表。
     候选字段见 ledger-format.md「候选字段」节。"""
@@ -181,4 +195,8 @@ def validate_candidate(candidate):
         problems.append(f"候选 model_consent_status 非法：{consent!r}")
     if candidate.get("model_id") is not None and not isinstance(candidate.get("model_id"), str):
         problems.append("候选 model_id 必须是字符串（不用模特资产时填 none）")
+    elif isinstance(candidate.get("model_id"), str) and candidate["model_id"].strip() and not MODEL_ID_RE.match(
+        normalize_model_id(candidate["model_id"])
+    ):
+        problems.append("候选 model_id 只能含小写字母、数字和连字符（如 miao-v1；不用模特资产时填 none）")
     return problems

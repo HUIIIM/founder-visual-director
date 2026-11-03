@@ -88,11 +88,11 @@ def rgb_to_hex(r, g, b):
 
 
 HEX_RE = re.compile(r"#([0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{3})\b")
-NUM = r"([-+]?\d*\.?\d+)(%|deg)?"
+NUM = r"([-+]?\d*\.?\d+)(%|deg|grad|rad|turn)?"
 SEP = r"\s*[,\s]\s*"
 RGB_RE = re.compile(r"rgba?\(\s*" + NUM + SEP + NUM + SEP + NUM, re.IGNORECASE)
 HSL_RE = re.compile(r"hsla?\(\s*" + NUM + SEP + NUM + SEP + NUM, re.IGNORECASE)
-OTHER_COLOR_FN_RE = re.compile(r"\b(hwb|lab|lch|oklab|oklch|color)\(", re.IGNORECASE)
+OTHER_COLOR_FN_RE = re.compile(r"\b(hwb|lab|lch|oklab|oklch|color|color-mix|device-cmyk|light-dark)\(", re.IGNORECASE)
 # CSS 颜色属性里的具名颜色（自然语言里的 "red jacket" 不算，只看属性上下文）
 NAMED_IN_PROPERTY_RE = re.compile(
     r"\b(?:color|background(?:-color)?|fill|stroke|border(?:-[a-z]+)?-color|outline-color)\s*:\s*([A-Za-z]+)\b",
@@ -141,7 +141,8 @@ def colors_in_line(line):
         r, g, b = (_channel(m.group(i), m.group(i + 1), 1.0) for i in (1, 3, 5))
         found.append((m.group(0) + ")", rgb_to_hex(round(r), round(g), round(b))))
     for m in HSL_RE.finditer(line):
-        h = float(m.group(1)) % 360 / 360.0
+        hue_scale = {"turn": 360.0, "rad": 180.0 / 3.141592653589793, "grad": 0.9}.get(m.group(2), 1.0)
+        h = float(m.group(1)) * hue_scale % 360 / 360.0
         sat = float(m.group(3)) / (100.0 if m.group(4) == "%" or float(m.group(3)) > 1 else 1.0)
         lig = float(m.group(5)) / (100.0 if m.group(6) == "%" or float(m.group(5)) > 1 else 1.0)
         r, g, b = colorsys.hls_to_rgb(h, max(0.0, min(1.0, lig)), max(0.0, min(1.0, sat)))

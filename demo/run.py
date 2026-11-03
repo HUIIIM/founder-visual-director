@@ -205,7 +205,9 @@ def main():
     ledger_abs = os.path.abspath(ledger)
     if ledger_abs.startswith(SKILL + os.sep):
         rot_report = rot_report.replace(ledger_abs, os.path.relpath(ledger_abs, SKILL))
-    rot_verdict = next((ln.split("结论：", 1)[1] for ln in rot_report.splitlines() if "结论：" in ln), "无法判定")
+    # 只认报告最后一条以「- 结论：」开头的行；调用方的值在报告里已单行化并加引号，伪造不了这一行（#23 第 2 项）
+    final_lines = [ln for ln in rot_report.splitlines() if ln.startswith("- 结论：")]
+    rot_verdict = final_lines[-1].split("- 结论：", 1)[1] if final_lines else "无法判定"
     if rot_code == 3:
         print("规则读取失败：轮换预检规则不完整，拒绝放行")
         return 4

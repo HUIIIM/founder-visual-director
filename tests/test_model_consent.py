@@ -71,6 +71,41 @@ class ModelConsent(unittest.TestCase):
         verdict, _ = consent_line([entry("p1")], candidate(model_id="none"))
         self.assertEqual(verdict, "通过")
 
+    def test_case_and_whitespace_variants_cannot_bypass_revocation(self):
+        # #37 residual: exact-match lookup let "Miao-v1" / "miao-v1 " past a ledger revocation.
+        ledger = [entry("p1"), entry("p0", status="已退役", model_consent_status="revoked")]
+        for variant in ("Miao-v1", "miao-v1 ", " MIAO-V1\t"):
+            with self.subTest(variant=variant):
+                verdict, line = consent_line(ledger, candidate(model_id=variant, model_consent_status="active"))
+                self.assertEqual(verdict, "违规")
+                self.assertIn("revoked", line)
+
+    def test_ledger_variant_spelling_still_matches(self):
+        ledger = [entry("p1"), entry("p0", model_id=" Miao-V1", model_consent_status="revoked")]
+        verdict, _ = consent_line(ledger, candidate(model_id="miao-v1", model_consent_status="active"))
+        self.assertEqual(verdict, "违规")
+
+    def test_none_contradicted_by_ledger_asset_is_cannot_judge(self):
+        # "none" is self-declared; the same asset_id carrying a model in the ledger contradicts it.
+        ledger = [entry("p1", asset_id="a-shared")]
+        verdict, line = consent_line(ledger, candidate(model_id="none", asset_id="a-shared"))
+        self.assertIn("无法判定", line)
+        self.assertIn("a-shared", line)
+        self.assertEqual(verdict, "条件通过")
+
+    def test_none_variant_spelling_is_none(self):
+        verdict, _ = consent_line([entry("p1")], candidate(model_id=" None "))
+        self.assertEqual(verdict, "通过")
+
+    def test_malformed_model_id_rejected_by_validation(self):
+        import ledger_lib
+
+        problems = ledger_lib.validate_candidate(candidate(model_id="miao v1; rm"))
+        self.assertTrue(any("model_id" in p for p in problems), problems)
+        self.assertFalse(
+            any("model_id" in p for p in ledger_lib.validate_candidate(candidate(model_id="Miao-V1 ")))
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

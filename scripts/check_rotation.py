@@ -72,6 +72,13 @@ def _d(value):
         return None
 
 
+def _shown(value):
+    """报告里展示调用方提供的值：单行化并加「」，使其无法伪造「- 结论：」等报告行（#23 第 2 项）。"""
+    if value is None:
+        return "（缺）"
+    return "「" + re.sub(r"\s+", " ", str(value)).strip() + "」"
+
+
 def _check_line(name, hits, unknown):
     if hits:
         return f"{name}：违规 " + "；".join(hits)
@@ -227,20 +234,40 @@ def evaluate(entries, candidate, rules, defect_count=0):
     # 任一条记为 expired / revoked 即违规；候选与台账都没有授权状态 = 无法判定（#32 P2-5）。
     hit, unknown = [], []
     consent = candidate.get("model_consent_status")
-    model_id = candidate.get("model_id")
+    model_id = ledger_lib.normalize_model_id(candidate.get("model_id"))
     if consent in ("expired", "revoked"):
         hit.append(f"模特资产授权状态为 {consent}，不得用于新内容")
     if not model_id:
         unknown.append("候选缺 model_id（不用模特资产时填 none）")
-    elif model_id != "none":
-        same_model = [e for e in entries if isinstance(e, dict) and e.get("model_id") == model_id]
+    elif model_id == "none":
+        # "none" is the candidate's own claim; the ledger may know better (#37 residual).
+        asset = candidate.get("asset_id")
+        modeled = [
+            e
+            for e in entries
+            if isinstance(e, dict)
+            and asset
+            and e.get("asset_id") == asset
+            and ledger_lib.normalize_model_id(e.get("model_id")) not in (None, "none")
+        ]
+        if modeled:
+            unknown.append(
+                f"候选填 model_id none，但台账里同一 asset_id {_shown(asset)} 登记过模特 "
+                f"{_shown(modeled[0].get('model_id'))}（条目 {_shown(modeled[0].get('ledger_id'))}）"
+            )
+    else:
+        same_model = [
+            e for e in entries if isinstance(e, dict) and ledger_lib.normalize_model_id(e.get("model_id")) == model_id
+        ]
         for e in same_model:
             if e.get("model_consent_status") in ("expired", "revoked"):
-                hit.append(f"台账登记 model_id {model_id} 授权为 {e.get('model_consent_status')}"
-                           f"（条目 {e.get('ledger_id')}），不得用于新内容")
+                hit.append(
+                    f"台账登记 model_id {_shown(model_id)} 授权为 {e.get('model_consent_status')}"
+                    f"（条目 {_shown(e.get('ledger_id'))}），不得用于新内容"
+                )
         recorded = consent or any(e.get("model_consent_status") for e in same_model)
         if not recorded and not hit:
-            unknown.append(f"model_id {model_id} 在候选与台账中都没有授权状态")
+            unknown.append(f"model_id {_shown(model_id)} 在候选与台账中都没有授权状态")
     findings.extend(hit)
     checks.append(_check_line("模特资产授权", hit, unknown))
 
@@ -272,20 +299,20 @@ def run(ledger_path, candidate):
     result = evaluate(entries, candidate, rules, defect_count=len(problems))
     c = candidate if isinstance(candidate, dict) else {}
     lines.append("- 候选：{} / {} / {} / 资产 {}（{} 级）".format(
-        c.get("platform"), c.get("date"), c.get("scene_category"), c.get("asset_id"), c.get("asset_grade")))
+        *(_shown(c.get(k)) for k in ("platform", "date", "scene_category", "asset_id", "asset_grade"))))
     lines.append(f"- 台账条目：共 {len(entries)} 条，字段缺陷 {len(problems)} 处")
     for p in problems:
-        lines.append(f"- 台账缺陷：{p}")
+        lines.append("- 台账缺陷：" + re.sub(r"\s+", " ", p))
     lines.append("")
     for line in result["checks"]:
-        lines.append(f"- 检查·{line}")
+        lines.append("- 检查·" + re.sub(r"\s+", " ", line))
     for n in result["notes"]:
-        lines.append(f"- 不确定性：{n}")
+        lines.append("- 不确定性：" + re.sub(r"\s+", " ", n))
     if result["findings"]:
         lines.append("")
         lines.append("## 违规明细")
         for f in result["findings"]:
-            lines.append("- " + f)
+            lines.append("- " + re.sub(r"\s+", " ", f))
         lines.append("- 处置建议：换场景大类 / 换服装造型 / 推迟到冷却期满后，并按 SKILL.md Step 1 "
                      "在 prompt 上标注「待场景确认」。")
     lines.append("")
