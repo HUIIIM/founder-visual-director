@@ -31,7 +31,7 @@
 | `styling` | string | 是 | 造型 |
 | `asset_grade` | enum | 是 | S / A / B |
 | `asset_id` | string | 是 | 素材资产 ID（冷却期按此 ID 计算） |
-| `model_id` | string | 是 | 模特资产版本（如 `miao-v1`），无则填 `none` |
+| `model_id` | string | 是 | 模特资产版本（如 `miao-v1`），无则填 `none`；只能含字母、数字和连字符（比对前去空白、转小写），否则记为条目缺陷 |
 | `model_consent_status` | enum | 否 | 模特资产授权状态：`active` / `expired` / `revoked`（授权过期或撤回即停用，见 docs/PRIVACY.md） |
 | `reference_roles` | string | 否 | 参考图角色摘要（人读，如 `anchor=path, style=path`） |
 | `status` | enum | 是 | 已发布 / 待发 / 已退役（轮换判定只计已发布+待发） |
@@ -62,7 +62,8 @@ v1.0 新增字段（补全机读所需，不改 v0.1 字段名）：
 | `scene_category` / `outfit` / `styling` | string | 与条目同名同义 |
 | `asset_id` / `asset_grade` | string / enum | 候选拟用资产 |
 | `uses_standard_portrait` | bool | 是否使用白底标准照作内容配图（true = 事故级违规）；必须是 JSON 布尔值，字符串 "true" 会被拒绝 |
-| `model_consent_status` | enum | 可选；`expired` / `revoked` = 违规（授权失效的模特资产不得用于新内容） |
+| `model_id` | string | 本次使用的模特资产版本（如 `miao-v1`）；不用模特资产填 `none`。只能含小写字母、数字和连字符；比对前候选与台账两边都去空白、转小写（`Miao-v1 ` 与 `miao-v1` 是同一个）。缺省 = 授权检查「无法判定」；填 `none` 但台账里同一 `asset_id` 登记过模特 = 「无法判定」 |
+| `model_consent_status` | enum | 可选；`expired` / `revoked` = 违规（授权失效的模特资产不得用于新内容）。未给时以台账同一 `model_id` 条目的登记为准；候选与台账都没有授权状态 = 「无法判定」；台账任一同 `model_id` 条目记为 `expired` / `revoked` = 违规 |
 
 ## 4. 机器校验（已实现）
 

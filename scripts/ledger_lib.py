@@ -131,6 +131,11 @@ def validate_entry(entry, idx):
         problems.append(f"{tag} 的 asset_grade 非法：{grade!r}（应为 S/A/B）")
     if entry.get("platform") is not None and normalize_platform(entry.get("platform")) is None:
         problems.append("{} 的 platform 非法：{!r}（应为 {}）".format(tag, entry.get("platform"), " / ".join(PLATFORMS)))
+    mid = entry.get("model_id")
+    if mid is not None and not (isinstance(mid, str) and MODEL_ID_RE.match(normalize_model_id(mid) or "")):
+        # A malformed id (zero-width space, full-width hyphen, underscore) would silently never
+        # match the candidate, so a revocation recorded on it would be ignored (IVV round 5).
+        problems.append(f"{tag} 的 model_id 非法：{mid!r}（只能含字母、数字和连字符，如 miao-v1；无则填 none）")
     consent = entry.get("model_consent_status")
     if consent is not None and consent not in MODEL_CONSENT_STATUSES:
         problems.append(f"{tag} 的 model_consent_status 非法：{consent!r}")
@@ -153,6 +158,27 @@ def validate_entry(entry, idx):
                 elif ref["role"] not in ROLES:
                     problems.append(f"{tag} 的 references[{j}] 角色非法：{ref['role']!r}")
     return problems
+
+
+MODEL_ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+
+
+def normalize_model_id(value):
+    """Canonical form for comparing model_id values: stripped, lower-case; non-strings → None.
+
+    Candidate and ledger are compared in this form, so "Miao-v1" or "miao-v1 " cannot slip
+    past a ledger entry that revoked "miao-v1" (#37 residual).
+    """
+    if not isinstance(value, str):
+        return None
+    return value.strip().lower() or None
+
+
+def normalize_asset_id(value):
+    """Canonical form for comparing asset_id values: stripped, lower-case; non-strings → None."""
+    if not isinstance(value, str):
+        return None
+    return value.strip().lower() or None
 
 
 def validate_candidate(candidate):
@@ -179,4 +205,10 @@ def validate_candidate(candidate):
     consent = candidate.get("model_consent_status")
     if consent is not None and consent not in MODEL_CONSENT_STATUSES:
         problems.append(f"候选 model_consent_status 非法：{consent!r}")
+    if candidate.get("model_id") is not None and not isinstance(candidate.get("model_id"), str):
+        problems.append("候选 model_id 必须是字符串（不用模特资产时填 none）")
+    elif isinstance(candidate.get("model_id"), str) and candidate["model_id"].strip() and not MODEL_ID_RE.match(
+        normalize_model_id(candidate["model_id"])
+    ):
+        problems.append("候选 model_id 只能含小写字母、数字和连字符（如 miao-v1；不用模特资产时填 none）")
     return problems
