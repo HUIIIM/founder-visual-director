@@ -41,7 +41,7 @@ def entry(ledger_id, date, **kw):
 def candidate(**kw):
     base = {"platform": "小红书", "date": "2026-10-26", "scene_category": "户外运动", "outfit": "new-outfit",
             "styling": "new-styling", "asset_id": "asset-new", "asset_grade": "A",
-            "uses_standard_portrait": False}
+            "uses_standard_portrait": False, "model_id": "miao-v1", "model_consent_status": "active"}
     base.update(kw)
     return base
 

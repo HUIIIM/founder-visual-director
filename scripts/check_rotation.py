@@ -222,13 +222,27 @@ def evaluate(entries, candidate, rules, defect_count=0):
     findings.extend(hit)
     checks.append(_check_line("白底三禁", hit, unknown))
 
-    # 检查 6：模特资产授权（docs/PRIVACY.md：授权过期或用途变更即停用）
-    hit = []
+    # 检查 6：模特资产授权（docs/PRIVACY.md：授权过期或用途变更即停用）。
+    # 候选给出 model_id 时，查全台账（不分平台、状态）里同一 model_id 的授权登记：
+    # 任一条记为 expired / revoked 即违规；候选与台账都没有授权状态 = 无法判定（#32 P2-5）。
+    hit, unknown = [], []
     consent = candidate.get("model_consent_status")
+    model_id = candidate.get("model_id")
     if consent in ("expired", "revoked"):
         hit.append(f"模特资产授权状态为 {consent}，不得用于新内容")
+    if not model_id:
+        unknown.append("候选缺 model_id（不用模特资产时填 none）")
+    elif model_id != "none":
+        same_model = [e for e in entries if isinstance(e, dict) and e.get("model_id") == model_id]
+        for e in same_model:
+            if e.get("model_consent_status") in ("expired", "revoked"):
+                hit.append(f"台账登记 model_id {model_id} 授权为 {e.get('model_consent_status')}"
+                           f"（条目 {e.get('ledger_id')}），不得用于新内容")
+        recorded = consent or any(e.get("model_consent_status") for e in same_model)
+        if not recorded and not hit:
+            unknown.append(f"model_id {model_id} 在候选与台账中都没有授权状态")
     findings.extend(hit)
-    checks.append(_check_line("模特资产授权", hit, []))
+    checks.append(_check_line("模特资产授权", hit, unknown))
 
     if findings:
         verdict = "违规"

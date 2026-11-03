@@ -179,4 +179,6 @@ def validate_candidate(candidate):
     consent = candidate.get("model_consent_status")
     if consent is not None and consent not in MODEL_CONSENT_STATUSES:
         problems.append(f"候选 model_consent_status 非法：{consent!r}")
+    if candidate.get("model_id") is not None and not isinstance(candidate.get("model_id"), str):
+        problems.append("候选 model_id 必须是字符串（不用模特资产时填 none）")
     return problems

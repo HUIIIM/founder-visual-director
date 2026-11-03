@@ -6,6 +6,9 @@ Versions follow git tags from v1.1.0 on (releases carry an SBOM, Sigstore signat
 
 ## [Unreleased]
 
+### Fixed
+- 模特资产授权检查不再「什么都没查也通过」（#32 P2-5）：候选带 `model_id`，全台账同一 `model_id` 任一条记为 expired / revoked 即违规；候选与台账都没有授权状态、或候选缺 `model_id`，均为「无法判定」（结论上限条件通过）。样例候选与 demo 输入补 `model_id` / `model_consent_status`。 / Consent check consults the ledger and no longer passes on missing data.
+
 ## [1.1.0] - 2026-10-30
 
 ### Added (publishing)
