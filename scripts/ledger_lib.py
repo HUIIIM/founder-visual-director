@@ -169,6 +169,13 @@ def normalize_model_id(value):
     return value.strip().lower() or None
 
 
+def normalize_asset_id(value):
+    """Canonical form for comparing asset_id values: stripped, lower-case; non-strings → None."""
+    if not isinstance(value, str):
+        return None
+    return value.strip().lower() or None
+
+
 def validate_candidate(candidate):
     """候选（本次待检交付）字段校验，返回缺陷列表。
     候选字段见 ledger-format.md「候选字段」节。"""

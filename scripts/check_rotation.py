@@ -241,13 +241,13 @@ def evaluate(entries, candidate, rules, defect_count=0):
         unknown.append("候选缺 model_id（不用模特资产时填 none）")
     elif model_id == "none":
         # "none" is the candidate's own claim; the ledger may know better (#37 residual).
-        asset = candidate.get("asset_id")
+        asset = ledger_lib.normalize_asset_id(candidate.get("asset_id"))
         modeled = [
             e
             for e in entries
             if isinstance(e, dict)
             and asset
-            and e.get("asset_id") == asset
+            and ledger_lib.normalize_asset_id(e.get("asset_id")) == asset
             and ledger_lib.normalize_model_id(e.get("model_id")) not in (None, "none")
         ]
         if modeled:

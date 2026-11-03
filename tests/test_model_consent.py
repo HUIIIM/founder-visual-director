@@ -93,6 +93,15 @@ class ModelConsent(unittest.TestCase):
         self.assertIn("a-shared", line)
         self.assertEqual(verdict, "条件通过")
 
+    def test_none_cross_check_ignores_asset_id_case_and_whitespace(self):
+        # IVV round 4: "XHS-ASSET-009" vs ledger "xhs-asset-009" slipped past the none cross-check.
+        ledger = [entry("p1", asset_id="xhs-asset-009")]
+        for variant in ("XHS-ASSET-009", "xhs-asset-009 "):
+            with self.subTest(variant=variant):
+                verdict, line = consent_line(ledger, candidate(model_id="none", asset_id=variant))
+                self.assertIn("无法判定", line)
+                self.assertEqual(verdict, "条件通过")
+
     def test_none_variant_spelling_is_none(self):
         verdict, _ = consent_line([entry("p1")], candidate(model_id=" None "))
         self.assertEqual(verdict, "通过")
