@@ -10,7 +10,7 @@
    git fetch origin main && git tag -a vX.Y.Z -m "vX.Y.Z" origin/main && git push origin vX.Y.Z
    ```
 
-3. `.github/workflows/release.yml` 会自动：核对标签与 `SKILL.md` 版本一致、CHANGELOG 有对应小节；
+3. `.github/workflows/release.yml` 会自动：核对标签所在提交在 `main` 上、标签与 `SKILL.md` 版本一致、CHANGELOG 有对应小节；
    跑与 PR CI 相同的门禁（ruff、单元测试、`validate_skill.py`、`demo/eval.sh`、样例可复现）；
    生成源码包、可复现的 CycloneDX SBOM 与 `SHA256SUMS`；对每个文件做 Sigstore 无密钥签名
    （`<文件>.sigstore.json`）；生成 GitHub 构建来源证明（SLSA v1）；最后创建 GitHub Release。
