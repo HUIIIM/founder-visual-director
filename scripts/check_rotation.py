@@ -229,13 +229,61 @@ def evaluate(entries, candidate, rules, defect_count=0):
     findings.extend(hit)
     checks.append(_check_line("白底三禁", hit, unknown))
 
-    # 检查 6：模特资产授权（docs/PRIVACY.md：授权过期或用途变更即停用）
-    hit = []
+    # 检查 6：模特资产授权（docs/PRIVACY.md：授权过期或用途变更即停用）。
+    # 候选给出 model_id 时，查全台账（不分平台、状态）里同一 model_id 的授权登记：
+    # 任一条记为 expired / revoked 即违规；候选与台账都没有授权状态 = 无法判定（#32 P2-5）。
+    hit, unknown = [], []
     consent = candidate.get("model_consent_status")
+    model_id = ledger_lib.normalize_model_id(candidate.get("model_id"))
     if consent in ("expired", "revoked"):
         hit.append(f"模特资产授权状态为 {consent}，不得用于新内容")
+    if not model_id:
+        unknown.append("候选缺 model_id（不用模特资产时填 none）")
+    elif model_id == "none":
+        # "none" is the candidate's own claim; the ledger may know better (#37 residual).
+        asset = ledger_lib.normalize_asset_id(candidate.get("asset_id"))
+        modeled = [
+            e
+            for e in entries
+            if isinstance(e, dict)
+            and asset
+            and ledger_lib.normalize_asset_id(e.get("asset_id")) == asset
+            and ledger_lib.normalize_model_id(e.get("model_id")) not in (None, "none")
+        ]
+        if modeled:
+            unknown.append(
+                f"候选填 model_id none，但台账里同一 asset_id {_shown(asset)} 登记过模特 "
+                f"{_shown(modeled[0].get('model_id'))}（条目 {_shown(modeled[0].get('ledger_id'))}）"
+            )
+    else:
+        same_model = [
+            e for e in entries if isinstance(e, dict) and ledger_lib.normalize_model_id(e.get("model_id")) == model_id
+        ]
+        for e in same_model:
+            if e.get("model_consent_status") in ("expired", "revoked"):
+                hit.append(
+                    f"台账登记 model_id {_shown(model_id)} 授权为 {e.get('model_consent_status')}"
+                    f"（条目 {_shown(e.get('ledger_id'))}），不得用于新内容"
+                )
+        recorded = consent or any(e.get("model_consent_status") for e in same_model)
+        if not recorded and not hit:
+            unknown.append(f"model_id {_shown(model_id)} 在候选与台账中都没有授权状态")
+    # 台账里任一条目的 model_id / 授权状态本身不合法，就无法确认它记的不是这个模特的撤销：
+    # 本行判「无法判定」，不印「通过」（#37 第 6 轮）。
+    if not hit:
+        for e in entries:
+            if not isinstance(e, dict):
+                continue
+            mid, cst = e.get("model_id"), e.get("model_consent_status")
+            bad_id = mid is not None and not (
+                isinstance(mid, str) and ledger_lib.MODEL_ID_RE.match(ledger_lib.normalize_model_id(mid) or "")
+            )
+            bad_status = cst is not None and cst not in ledger_lib.MODEL_CONSENT_STATUSES
+            if bad_id or bad_status:
+                unknown.append(f"台账条目 {_shown(e.get('ledger_id'))} 的 model_id 或授权状态不合法，无法确认其授权记录")
+                break
     findings.extend(hit)
-    checks.append(_check_line("模特资产授权", hit, []))
+    checks.append(_check_line("模特资产授权", hit, unknown))
 
     if findings:
         verdict = "违规"

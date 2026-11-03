@@ -192,6 +192,8 @@ def main():
         "asset_id": inp.get("asset_id"),
         "asset_grade": inp.get("asset_grade"),
         "uses_standard_portrait": inp.get("uses_standard_portrait", False),
+        "model_id": inp.get("model_id"),
+        "model_consent_status": inp.get("model_consent_status"),
     }
     # 场景文字本身写明白底标准照/白底棚拍时，不靠调用者另设标志才拦（白底三禁）
     if white_hits:
