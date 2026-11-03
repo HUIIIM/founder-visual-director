@@ -98,6 +98,18 @@ class PermanentRetirement(unittest.TestCase):
         self.assertIn("无法判定", line(report, "已发布图永久退役"))
         self.assertIn("缺 image_sha256", report)
 
+    def test_malformed_hash_line_is_cannot_judge_not_pass(self):
+        # #49 round 2 P2: the overall verdict was capped, but the check line still said 通过.
+        for kw in ({"image_sha256": "sha256:" + sha("x")}, {"image_sha256": sha("x")[:63]}):
+            with self.subTest(**kw):
+                code, report = run(compliant_candidate(**kw))
+                self.assertNotEqual(code, 0, report)
+                self.assertIn("无法判定", line(report, "已发布图永久退役"))
+        entries = compliant_ledger()
+        entries[0]["image_sha256"] = "sha256:" + entries[0]["image_sha256"]
+        code, report = run(compliant_candidate(), entries)
+        self.assertIn("无法判定", line(report, "已发布图永久退役"))
+
     def test_malformed_hash_is_a_candidate_problem(self):
         code, report = run(compliant_candidate(image_sha256="not-a-hash"))
         self.assertNotEqual(code, 0, report)

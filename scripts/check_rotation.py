@@ -294,13 +294,16 @@ def evaluate(entries, candidate, rules, defect_count=0):
     digest = ledger_lib.normalize_key(candidate.get("image_sha256"))
     if not digest:
         unknown.append("候选缺 image_sha256，已发布图是否被复用无法机判（须人工确认）")
+    elif not ledger_lib.SHA256_RE.match(digest):
+        # 已知非法的键拿去比对只能空比：本行判「无法判定」，不印「通过」（#49 第 2 轮 P2）
+        unknown.append("候选 image_sha256 格式非法，已发布图是否被复用无法机判")
     else:
         unhashed = []
         for e in entries:
             if not isinstance(e, dict) or e.get("status") not in ("已发布", "已退役"):
                 continue
-            if not ledger_lib.normalize_key(e.get("image_sha256")):
-                unhashed.append(e.get("ledger_id") or "?")
+            if not ledger_lib.SHA256_RE.match(ledger_lib.normalize_key(e.get("image_sha256")) or ""):
+                unhashed.append(e.get("ledger_id") or "?")  # 缺失或格式非法：都看不见这张图
                 continue
             if ledger_lib.normalize_key(e.get("image_sha256")) == digest:
                 hit.append(
@@ -310,7 +313,9 @@ def evaluate(entries, candidate, rules, defect_count=0):
         # 已发布条目没登记哈希就看不到这张图：不能报「通过」（#49 第 1 轮：空比对 = 无法判定）
         if unhashed and not hit:
             shown = ",".join(_shown(i) for i in unhashed[:5]) + ("…" if len(unhashed) > 5 else "")
-            unknown.append(f"{len(unhashed)} 条已发布/已退役条目缺 image_sha256（{shown}），这些图是否被复用无法机判")
+            unknown.append(
+                f"{len(unhashed)} 条已发布/已退役条目缺 image_sha256 或格式非法（{shown}），这些图是否被复用无法机判"
+            )
     findings.extend(hit)
     checks.append(_check_line("已发布图永久退役", hit, unknown))
 
