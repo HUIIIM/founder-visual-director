@@ -102,6 +102,20 @@ class ModelConsent(unittest.TestCase):
                 self.assertIn("无法判定", line)
                 self.assertEqual(verdict, "条件通过")
 
+    def test_malformed_ledger_model_id_is_a_defect_not_a_silent_pass(self):
+        # IVV round 5: a revocation recorded under a look-alike id was ignored with no warning.
+        import ledger_lib
+
+        for bad in ("miao\u200b-v1", "miao\uff0dv1", "Miao_v1"):
+            with self.subTest(bad=bad):
+                problems = ledger_lib.validate_entry(
+                    entry("p0", status="已退役", model_consent_status="revoked", model_id=bad), 0
+                )
+                self.assertTrue(any("model_id" in p for p in problems), problems)
+        self.assertFalse(
+            any("model_id" in p for p in ledger_lib.validate_entry(entry("p1", model_id=" Miao-V1"), 0))
+        )
+
     def test_none_variant_spelling_is_none(self):
         verdict, _ = consent_line([entry("p1")], candidate(model_id=" None "))
         self.assertEqual(verdict, "通过")

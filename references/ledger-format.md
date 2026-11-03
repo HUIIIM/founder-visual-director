@@ -31,7 +31,7 @@
 | `styling` | string | 是 | 造型 |
 | `asset_grade` | enum | 是 | S / A / B |
 | `asset_id` | string | 是 | 素材资产 ID（冷却期按此 ID 计算） |
-| `model_id` | string | 是 | 模特资产版本（如 `miao-v1`），无则填 `none` |
+| `model_id` | string | 是 | 模特资产版本（如 `miao-v1`），无则填 `none`；只能含字母、数字和连字符（比对前去空白、转小写），否则记为条目缺陷 |
 | `model_consent_status` | enum | 否 | 模特资产授权状态：`active` / `expired` / `revoked`（授权过期或撤回即停用，见 docs/PRIVACY.md） |
 | `reference_roles` | string | 否 | 参考图角色摘要（人读，如 `anchor=path, style=path`） |
 | `status` | enum | 是 | 已发布 / 待发 / 已退役（轮换判定只计已发布+待发） |
