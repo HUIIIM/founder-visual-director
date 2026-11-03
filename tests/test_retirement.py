@@ -100,15 +100,27 @@ class PermanentRetirement(unittest.TestCase):
 
     def test_malformed_hash_line_is_cannot_judge_not_pass(self):
         # #49 round 2 P2: the overall verdict was capped, but the check line still said 通过.
-        for kw in ({"image_sha256": "sha256:" + sha("x")}, {"image_sha256": sha("x")[:63]}):
+        for kw in ({"image_sha256": "md5:" + sha("x")}, {"image_sha256": sha("x")[:63]}):
             with self.subTest(**kw):
                 code, report = run(compliant_candidate(**kw))
                 self.assertNotEqual(code, 0, report)
                 self.assertIn("无法判定", line(report, "已发布图永久退役"))
         entries = compliant_ledger()
-        entries[0]["image_sha256"] = "sha256:" + entries[0]["image_sha256"]
+        entries[0]["image_sha256"] = "md5:" + entries[0]["image_sha256"]
         code, report = run(compliant_candidate(), entries)
         self.assertIn("无法判定", line(report, "已发布图永久退役"))
+
+    def test_sha256_label_is_not_part_of_the_hash(self):
+        # #49 round 3: "sha256:<hex>" on either or both sides is the same digest.
+        target = sha("image-xhs-2026-009")
+        for cand, led in (("sha256:" + target, None), (target, "sha256:" + target), ("SHA256:" + target, "sha256:" + target)):
+            with self.subTest(candidate=cand[:10], ledger=(led or "")[:10]):
+                entries = compliant_ledger()
+                if led:
+                    entries[0]["image_sha256"] = led
+                code, report = run(compliant_candidate(image_sha256=cand), entries)
+                self.assertEqual(code, 1, report)
+                self.assertIn("违规", line(report, "已发布图永久退役"))
 
     def test_malformed_hash_is_a_candidate_problem(self):
         code, report = run(compliant_candidate(image_sha256="not-a-hash"))

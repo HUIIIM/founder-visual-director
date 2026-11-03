@@ -291,7 +291,7 @@ def evaluate(entries, candidate, rules, defect_count=0):
     # 判定对象是产物图本身（image_sha256，ledger-format.md「一图一记录」字段），不是可在冷却期后
     # 复用的素材 asset_id：任一已发布/已退役条目登记了同一哈希即违规，不分平台、不看日期（#41）。
     hit, unknown = [], []
-    digest = ledger_lib.normalize_key(candidate.get("image_sha256"))
+    digest = ledger_lib.normalize_sha256(candidate.get("image_sha256"))
     if not digest:
         unknown.append("候选缺 image_sha256，已发布图是否被复用无法机判（须人工确认）")
     elif not ledger_lib.SHA256_RE.match(digest):
@@ -302,10 +302,10 @@ def evaluate(entries, candidate, rules, defect_count=0):
         for e in entries:
             if not isinstance(e, dict) or e.get("status") not in ("已发布", "已退役"):
                 continue
-            if not ledger_lib.SHA256_RE.match(ledger_lib.normalize_key(e.get("image_sha256")) or ""):
+            if not ledger_lib.SHA256_RE.match(ledger_lib.normalize_sha256(e.get("image_sha256")) or ""):
                 unhashed.append(e.get("ledger_id") or "?")  # 缺失或格式非法：都看不见这张图
                 continue
-            if ledger_lib.normalize_key(e.get("image_sha256")) == digest:
+            if ledger_lib.normalize_sha256(e.get("image_sha256")) == digest:
                 hit.append(
                     f"该图已发布过（条目 {_shown(e.get('ledger_id'))}，{_shown(e.get('platform'))}），"
                     "已发布图永久退役，不得二次使用"

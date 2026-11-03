@@ -206,11 +206,23 @@ def normalize_asset_id(value):
     return normalize_key(value)
 
 
+def normalize_sha256(value):
+    """image_sha256 in comparison form: normalize_key, then drop one leading "sha256:" label.
+
+    Tools commonly write digests as "sha256:<hex>" (OCI, docker inspect); the label is not
+    part of the hash (#49 round 3). Returns None for non-strings and empty values.
+    """
+    key = normalize_key(value)
+    if key and key.startswith("sha256:"):
+        key = key[len("sha256:"):].strip() or None
+    return key
+
+
 def id_problem(field, value, pattern, hint):
     """Return a defect text when a present identifier fails its format after normalisation."""
     if value is None or (isinstance(value, str) and not value.strip()):
         return None
-    norm = normalize_key(value)
+    norm = normalize_sha256(value) if pattern is SHA256_RE else normalize_key(value)
     if norm is None or not pattern.match(norm):
         return f"{field} 非法：{value!r}（{hint}）"
     return None
