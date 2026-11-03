@@ -22,14 +22,30 @@ on:
   pull_request_review:
     types: [submitted]
 
+# One run per issue/PR at a time; a second @claude waits instead of racing the first.
+concurrency:
+  group: claude-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
 jobs:
   claude:
+    # Trust gate (independent review #32 P1-1): run only when the person who wrote the
+    # triggering text AND the author of the issue/PR it sits on are OWNER, MEMBER or
+    # COLLABORATOR. Text written by anyone else never reaches a write-scoped agent, whatever
+    # event (comment, review, opened, assigned) carries it there.
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association))
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -39,7 +55,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
 
@@ -49,6 +65,9 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: ${{ inputs.prompt }}
           # Tool allowlist (run 41365340458 had permission_denials_count=3 and
-          # landed no artifacts): Write/Edit = create the deliverable files,
-          # Bash(git:*) = branch/commit/push, Bash(gh:*) = open PR + comment.
-          claude_args: --allowedTools "Read,Glob,Grep,Write,Edit,Bash(git:*),Bash(gh:*)"
+          # landed no artifacts): Write/Edit = create the deliverable files, the git
+          # subcommands = branch/commit/push, the gh subcommands = open PR + comment.
+          # Named subcommands only (#32 P1-1): a bare Bash(git:*) also allowed
+          # `git -c alias.x='!cmd' x`, i.e. any shell; a bare Bash(gh:*) allowed `gh api`.
+          claude_args: >-
+            --allowedTools "Read,Glob,Grep,Write,Edit,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git rev-parse:*),Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(git pull:*),Bash(git push:*),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*)"
