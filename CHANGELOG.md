@@ -7,7 +7,7 @@ Versions follow git tags from v1.1.0 on (releases carry an SBOM, Sigstore signat
 ## [Unreleased]
 
 ### Changed
-- 机读规则附表升至 v0.2（#42）：B 级触发补英文对译（famous / actor / gala / dinner party 等），文字年龄（thirties / thirty-something / 四十多岁）、面部词「眼神」、禁用词 cinematic 的中文对应「电影感」入表；拉丁词条按词形匹配（lifted shadows / brightened / smiley 命中原词条）；白底 + 人像/头像的英文写法按白底标准照拦截。11 个独立评估绕过探针写成回归测试（`tests/test_prompt_rules.py`）。 / Rule table v0.2 closes 11 bypass probes from the independent assessment.
+- 机读规则附表升至 v0.2（#42）：B 级触发补英文对译（famous / actor / gala / dinner party 等），文字年龄（thirties / thirty-something / 四十多岁）、面部词「眼神」、禁用词 cinematic 的中文对应「电影感」入表；词形变化逐条列出（smiley / grinning / lifted shadows / brightened 等；不做后缀通配，免得 `grin` 误伤叙事调性 `grind`）；电影质感 / 电影级、连字符与中文数字年龄、中年、目光 / 嘴角 / 笑、红毯 / 宴会 / 颁奖典礼入表；匹配前去零宽字符并 NFKC；白底 / white background 等 + 人像，以及证件照，按白底标准照拦截（棚拍本身不算白底）。30 个绕过探针与 12 个正常场景（含 SKILL.md 叙事调性原词、暗调棚拍）写成回归测试（`tests/test_prompt_rules.py`）。 / Rule table v0.2 closes 30 bypass probes without rejecting the skill's own vocabulary.
 - demo 的 QA 检查表改为逐项取自 references（脸角度 3 + 人体比例 10 + 真实感 11 + 背景 5），条数不符按规则读取失败拒绝放行；满足 `evals.json` #7 的断言。 / The demo QA checklist now carries every item from references.
 
 ### Fixed

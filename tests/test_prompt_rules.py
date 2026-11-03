@@ -29,12 +29,43 @@ BYPASS_PROBES = {
     "dinner party with a famous actor": "B-level, English",
     "gala evening portrait in a ballroom": "B-level, English",
     "studio portrait on white backdrop": "white-background standard portrait, English",
+    # Round 6 (#46): rewordings of the same classes that still passed.
+    "暗调电影质感的书房": "banned: 暗调电影质感 (prompt-standards.md says never write it into a prompt)",
+    "电影级布光的办公室": "banned: 电影级",
+    "a 35-year-old founder at a desk": "age, hyphenated",
+    "forty-year-old founder on a bench": "age in words, hyphenated",
+    "三十五岁的创始人": "age, Chinese numerals",
+    "中年创始人在书房": "age: 中年",
+    "grinning founder at a cafe": "face word, inflected",
+    "beaming founder at the office": "face word",
+    "笑着看向窗外的创始人": "face word: 笑",
+    "目光坚定地看向远方": "face word: 目光",
+    "嘴角上扬的创始人": "face word: 嘴角",
+    "founder among celebrities at an event": "B-level, plural",
+    "颁奖典礼后台": "B-level: 颁奖典礼",
+    "走红毯的瞬间": "B-level: 红毯",
+    "公司宴会上敬酒": "B-level: 宴会",
+    "白色背景前的证件照": "white-background standard portrait, Chinese",
+    "white-background headshot": "white-background standard portrait, hyphenated",
+    "headshot against a plain white wall": "white-background standard portrait, plain white",
+    "cine\u200bmatic rooftop at dawn": "banned word split by a zero-width space",
 }
 
 BENIGN = [
     BASE["scene"],
     "founder reading a book about galaxies by a cafe window",
     "walking past a bookstore on a rainy afternoon",
+    # Round 6 (#46) regressions: the skill's own tone vocabulary (SKILL.md 叙事调性) and the
+    # brand's dark studio direction must not be rejected.
+    "书房夜景，grind 叙事",
+    "the daily grind at a co-working desk",
+    "暗调棚拍肖像，低调布光",
+    "dark low-key studio portrait, 棚拍",
+    "old money 克制：老钱风书房，深色木书架",
+    "强抓眼球的屋顶健身",
+    "生活感：周末菜市场买菜",
+    "戴眼镜的创始人在窗边看书",
+    "a famously quiet library",
 ]
 
 

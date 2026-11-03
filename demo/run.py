@@ -27,10 +27,13 @@ from datetime import date as _date
 DEMO = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(DEMO)
 STANDARDS = os.path.join(SKILL, "references", "prompt-standards.md")
-WHITE_PORTRAIT_WORDS = ["标准照", "标准头像", "standard portrait", "standard avatar"]
+WHITE_PORTRAIT_WORDS = ["标准照", "标准头像", "证件照", "standard portrait", "standard avatar", "id photo"]
 # 白底场景词：中文 + 英文对译（#42：white backdrop / white seamless 原先漏判）
-PORTRAIT_WORDS = ["portrait", "headshot", "头像", "证件照", "半身照", "肖像"]
-WHITE_STUDIO_WORDS = ["白底", "棚拍", "white background", "white backdrop", "white seamless", "plain white studio"]
+PORTRAIT_WORDS = ["portrait", "headshot", "头像", "半身照", "肖像"]
+# 只有真正的白底词才把「人像」判成白底标准照；棚拍本身不等于白底（暗调棚拍是品牌美术方向，#46 第 6 轮）
+WHITE_BG_WORDS = ["白底", "白色背景", "white background", "white backdrop", "white seamless", "plain white"]
+WHITE_STUDIO_WORDS = WHITE_BG_WORDS + ["棚拍"]  # 只用于推断 scene_category（与 main 一致）
+ZERO_WIDTH = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff\u00ad"))
 OUT = os.environ.get("FVD_DEMO_OUT") or os.path.join(DEMO, "output")
 os.makedirs(OUT, exist_ok=True)
 
@@ -80,23 +83,22 @@ def load_rules():
     return phrases, negative, banned, face_words, age_patterns, pairs, b_triggers
 
 
-INFLECTION = r"(?:s|es|ed|d|ing|er|y|ly|ally)?"
+def normalize_text(text):
+    """去零宽字符与软连字符，再 NFKC（全角 → 半角）。不处理跨文字形近字（如西里尔 с）。"""
+    return unicodedata.normalize("NFKC", text.translate(ZERO_WIDTH))
 
 
 def _latin_pattern(tok):
-    """拉丁词条的匹配式：词边界 + 每个以字母结尾的词允许常见词形变化，词间任意空白或连字符。
-
-    `lift shadows` 命中 `lifted shadows`，`brighten` 命中 `brightened`，`smile` 命中 `smiley`，
-    `cinematic lighting` 命中 `Cinematic-lighting`（#6 第 2 轮超出条款 3 的绕过探针）。
-    """
+    """拉丁词条的匹配式：词边界，词间允许任意空白或连字符（`cinematic lighting` 命中
+    `Cinematic-lighting`）。词形变化不做通配，由附表逐条列出（#46 第 6 轮：通配后缀让
+    `grin` 命中叙事调性 `grind`）。"""
     words = [w for w in re.split(r"[\s-]+", tok) if w]
-    parts = [re.escape(w) + (INFLECTION if w[-1].isalpha() else "") for w in words]
-    return r"\b" + r"[\s-]+".join(parts) + r"\b"
+    return r"\b" + r"[\s-]+".join(re.escape(w) for w in words) + r"\b"
 
 
 def hits_in(text, tokens):
-    """词表命中：拉丁词按词边界与词形变化（不分大小写），中文按子串。"""
-    text = unicodedata.normalize("NFKC", text)
+    """词表命中：拉丁词按词边界（不分大小写，空白/连字符等价），中文按子串。"""
+    text = normalize_text(text)
     out = []
     for tok in tokens:
         if re.search(r"[^\x00-\xff]", tok):
@@ -201,7 +203,7 @@ def main():
     for ph in phrases:
         masked = masked.replace(ph, " ")
     face_hits = hits_in(masked, face_words)
-    age_hits = [p for p in age_patterns if re.search(p, masked, re.IGNORECASE)]
+    age_hits = [p for p in age_patterns if re.search(p, normalize_text(masked), re.IGNORECASE)]
     # 检查三：冲突审计（互斥对，真判定：同对两边同时出现即冲突）
     conflicts = []
     scan_all = positive + " " + scene
@@ -212,10 +214,10 @@ def main():
     # 检查四：B 级严审（真实可识别人物场景不在本 skill 内放行，SKILL.md Step 2-1）
     b_hits = hits_in(scene + " " + theme, b_triggers)
     # 检查五：白底标准照永不作内容配图（白底三禁 1，事故级；不依赖台账）
-    scene_l = unicodedata.normalize("NFKC", scene).lower()
+    scene_l = re.sub(r"[\s-]+", " ", normalize_text(scene).lower())
     white_hits = [w for w in WHITE_PORTRAIT_WORDS if w in scene_l]
     # 白底 + 人像/头像 = 标准照的另一种写法（#42：「studio portrait on white backdrop」原先放行）
-    white_scene = [w for w in WHITE_STUDIO_WORDS if w in scene_l]
+    white_scene = [w for w in WHITE_BG_WORDS if w in scene_l]
     portrait = [w for w in PORTRAIT_WORDS if w in scene_l]
     if white_scene and portrait:
         white_hits.append(f"{white_scene[0]} + {portrait[0]}")

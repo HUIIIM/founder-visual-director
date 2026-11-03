@@ -51,28 +51,30 @@ HDR / 过饱和 / oversaturated / 电影感灯光 / 完美皮肤 / perfect skin 
 > 互斥对 ← SKILL.md Step 3-6 与上文七规范 6；B 级触发 ← SKILL.md Step 2-1（真实可识别人物转 B 级严审）；
 > 中文同义 ← 禁用词表 `cinematic`（电影感）。
 > v0.2（#42）：补英文 B 级触发与文字年龄的中英对译、面部词「眼神」、禁用词 cinematic 的中文对应「电影感」；
-> 拉丁词条由工具按词形匹配（-s / -es / -ed / -d / -ing / -er / -y / -ly / -ally），
-> 所以 `lifted shadows`、`brightened`、`smiley` 均命中对应原词条，无需逐一列出。
+> 词形变化逐条列出，不做后缀通配（通配会让 `grin` 命中叙事调性 `grind`）；拉丁词条词间的空白与连字符等价，
+> 匹配前去零宽字符并做 NFKC（全角 → 半角）。`电影质感` / `电影级` ← 上文「暗调电影质感」不得原样写进 prompt。
 
 ```text
 [face_words]
-eye, eyes, eyebrow, eyebrows, nose, nostril, lips, smile, smiling, grin,
-眼睛, 眼神, 眼睑, 鼻子, 鼻梁, 嘴唇, 笑容, 微笑, 年龄感
+eye, eyes, eyebrow, eyebrows, nose, nostril, lips, smile, smiles, smiled, smiley, smiling,
+grin, grins, grinned, grinning, beaming,
+眼睛, 眼神, 双眼, 目光, 眼睑, 鼻子, 鼻梁, 嘴唇, 嘴角, 笑, 年龄感
 [age_patterns]
 \b\d{2}s\b
-\b\d+\s*years?\s*old\b
-\b\d+\s*岁
+\b\d+[\s-]*years?[\s-]*old\b
+\b(twenty|thirty|forty|fifty|sixty|seventy)[\s-]*years?[\s-]*old\b
+[0-9一二三四五六七八九十两]+\s*多?岁
+中年
 middle-aged
 \b(twenty|thirty|forty|fifty|sixty|seventy)[\s-]*something\b
 \b(twenties|thirties|forties|fifties|sixties|seventies)\b
-[0-9一二三四五六七八九十]+\s*多岁
 [conflict_pairs]
 夜景|夜晚|夜间|night <> 正午烈日|正午|烈日|midday|noon
 自拍|selfie|手机自拍 <> 85mm
 [extra_banned]
-电影感
+电影感, 电影质感, 电影级, lifted shadows, lifting shadows, brightened
 [b_level_triggers]
-名人, 合影, 晚宴, 政治名媛, 明星, 政要, celebrity, red carpet,
+名人, 合影, 晚宴, 宴会, 政治名媛, 明星, 政要, 红毯, 颁奖典礼, celebrity, celebrities, red carpet,
 famous, actor, actress, politician, socialite, gala, dinner party, banquet
 ```
 
