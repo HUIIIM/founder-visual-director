@@ -18,7 +18,7 @@
 
 ## 自动打标签机制 / Auto-tag mechanism（#31 裁定采纳）
 
-第 2 步的打标签动作由此机制泛化为自动执行；规则如下：
+第 2 步的打标签动作由此机制泛化为自动执行；完整正本见 [`release-tagging.md`](release-tagging.md)，规则摘要如下：
 
 1. **触发**：发版 PR 合并进 `main` 时，在该合并提交上打标签（附注标签，随后由第 3 步的 `release.yml` 接手）。
 2. **命名**：`v<semver>`，取自被封版的版本号（即该 PR 中 `SKILL.md` `metadata.version`，且须与 `CHANGELOG.md` 小节一致）。
