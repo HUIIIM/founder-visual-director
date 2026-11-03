@@ -33,6 +33,7 @@ def entry(ledger_id, date, **kw):
         "model_id": "miao-v1", "status": "已发布", "ai_generated": True,
         "ai_disclosure_text": "本图由 AI 生成", "ai_disclosure_method": "platform_declaration",
         "ai_disclosure_basis": "标识办法",
+        "image_sha256": hashlib.sha256(f"image-{ledger_id}".encode()).hexdigest(),
     }
     base.update(kw)
     return base
@@ -41,7 +42,8 @@ def entry(ledger_id, date, **kw):
 def candidate(**kw):
     base = {"platform": "小红书", "date": "2026-10-26", "scene_category": "户外运动", "outfit": "new-outfit",
             "styling": "new-styling", "asset_id": "asset-new", "asset_grade": "A",
-            "uses_standard_portrait": False, "model_id": "miao-v1", "model_consent_status": "active"}
+            "uses_standard_portrait": False, "model_id": "miao-v1", "model_consent_status": "active",
+            "image_sha256": "f57d196a115ea44f2531b38d8c758498ffb15edba2735d3630215859a4f7ae76"}
     base.update(kw)
     return base
 

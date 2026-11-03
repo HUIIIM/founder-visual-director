@@ -4,6 +4,7 @@ Before: the check only read a caller-supplied model_consent_status, so omitting 
 "模特资产授权：通过" and a revoked model recorded in the ledger was never consulted.
 """
 
+import hashlib
 import os
 import sys
 import unittest
@@ -19,14 +20,16 @@ RULES = check_rotation.load_rotation_rules()
 def entry(ledger_id, **kw):
     base = {"ledger_id": ledger_id, "platform": "小红书", "date_made": "2026-09-01", "date_published": "2026-09-01",
             "status": "已发布", "scene_category": "室内书房", "outfit": f"o-{ledger_id}", "styling": f"s-{ledger_id}",
-            "asset_id": f"a-{ledger_id}", "asset_grade": "A", "model_id": "miao-v1"}
+            "asset_id": f"a-{ledger_id}", "asset_grade": "A", "model_id": "miao-v1",
+            "image_sha256": hashlib.sha256(f"image-{ledger_id}".encode()).hexdigest()}
     base.update(kw)
     return base
 
 
 def candidate(**kw):
     base = {"platform": "小红书", "date": "2026-10-26", "scene_category": "户外运动", "outfit": "new",
-            "styling": "new", "asset_id": "a-new", "asset_grade": "A", "uses_standard_portrait": False}
+            "styling": "new", "asset_id": "a-new", "asset_grade": "A", "uses_standard_portrait": False,
+            "image_sha256": "f57d196a115ea44f2531b38d8c758498ffb15edba2735d3630215859a4f7ae76"}
     base.update(kw)
     return base
 
