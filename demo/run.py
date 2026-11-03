@@ -31,10 +31,19 @@ WHITE_PORTRAIT_WORDS = ["标准照", "标准头像", "证件照", "standard port
 # 白底场景词：中文 + 英文对译（#42：white backdrop / white seamless 原先漏判）
 PORTRAIT_WORDS = ["portrait", "headshot", "头像", "半身照", "肖像"]
 # 只有真正的白底词才把「人像」判成白底标准照；棚拍本身不等于白底（暗调棚拍是品牌美术方向，#46 第 6 轮）
-WHITE_BG_WORDS = [
-    "白底", "白色背景", "白墙", "white background", "white backdrop", "white seamless",
-    "white wall", "plain white backdrop", "plain white studio",
+# 白底「背景」只认明确的背景写法（正向匹配，#46 第 8 轮）：「白墙」作子串会命中「黑白墙绘」
+# 「白墙画廊」，`white wall` 会命中 off-white wall；所以墙只在「…前 / 背景」「against a white wall」
+# 这类把它当背景的写法里算数，拉丁词在连字符归一化之前判边界。
+WHITE_BG_PATTERNS = [
+    r"白底",
+    r"(纯)?白色?背景",
+    r"纯白墙",
+    r"白墙(前|背景|面前)",
+    r"(?<![\w-])white[\s-]+(background|backdrop|seamless)\b",
+    r"\bagainst an? (plain )?white wall\b",
+    r"\bplain white studio\b",
 ]
+WHITE_BG_WORDS = ["白底", "白色背景", "white background", "white backdrop", "white seamless"]
 # 构图术语里的 portrait 不是「人像」（#46 第 7 轮：portrait orientation 是竖构图）
 NOT_PORTRAIT = ["portrait orientation", "portrait mode", "portrait format", "portrait aspect"]
 WHITE_STUDIO_WORDS = WHITE_BG_WORDS + ["棚拍"]  # 只用于推断 scene_category（与 main 一致）
@@ -229,7 +238,8 @@ def main():
     scene_l = re.sub(r"[\s-]+", " ", normalize_text(scene).lower())
     white_hits = [w for w in WHITE_PORTRAIT_WORDS if _word_in(w, scene_l)]
     # 白底 + 人像/头像 = 标准照的另一种写法（#42：「studio portrait on white backdrop」原先放行）
-    white_scene = [w for w in WHITE_BG_WORDS if _word_in(w, scene_l)]
+    scene_raw = re.sub(r"\s+", " ", normalize_text(scene).lower())  # 保留连字符：off-white 不是 white
+    white_scene = [m.group(0) for p in WHITE_BG_PATTERNS for m in [re.search(p, scene_raw)] if m]
     scene_np = scene_l
     for phrase in NOT_PORTRAIT:
         scene_np = scene_np.replace(phrase, " ")

@@ -54,6 +54,9 @@ BYPASS_PROBES = {
     "四十岁的创始人在书房": "age, Chinese numerals, the founder's own",
     "ID photo of the founder": "standard portrait: id photo as words",
     "founder portrait against a white wall": "white-background portrait: white wall",
+    "白墙前的创始人半身照": "white-background portrait: 白墙前",
+    "纯白背景的创始人头像": "white-background portrait: 纯白背景",
+    "创始人今年四十岁，在书房": "age: the founder's own, subject first",
 }
 
 BENIGN = [
@@ -79,6 +82,13 @@ BENIGN = [
     "初中年级的公益课堂",
     "春节前夕的办公室，中年味渐浓",
     "陪两岁的女儿在公园散步",
+    # Round 8 (#46): false positives introduced by the round-7 table.
+    "黑白墙绘前的创始人半身照",
+    "创始人在白墙画廊里看肖像画展",
+    "off-white wall behind a founder portrait",
+    "white wall gallery, founder portrait among paintings",
+    "女儿两岁生日，创始人在家",
+    "孩子三岁那年创办公司的创始人在书房",
 ]
 
 
