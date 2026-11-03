@@ -22,14 +22,32 @@ on:
   pull_request_review:
     types: [submitted]
 
+# One run per issue/PR at a time; a second @claude waits instead of racing the first.
+# GitHub keeps one running and ONE pending run per group: a third @claude while one is
+# pending replaces (cancels) the pending one. Re-mention after the run finishes.
+concurrency:
+  group: claude-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
 jobs:
   claude:
+    # Trust gate (independent review #32 P1-1): run only when the person who wrote the
+    # triggering text AND the author of the issue/PR it sits on are OWNER, MEMBER or
+    # COLLABORATOR. Text written by anyone else never reaches a write-scoped agent, whatever
+    # event (comment, review, opened, assigned) carries it there.
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association))
     runs-on: ubuntu-latest
     # SEC-8: bound every job; the default is 6 hours.
     timeout-minutes: 60
@@ -41,7 +59,7 @@ jobs:
       actions: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
 
@@ -51,6 +69,20 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: ${{ inputs.prompt }}
           # Tool allowlist (run 41365340458 had permission_denials_count=3 and
-          # landed no artifacts): Write/Edit = create the deliverable files,
-          # Bash(git:*) = branch/commit/push, Bash(gh:*) = open PR + comment.
-          claude_args: --allowedTools "Read,Glob,Grep,Write,Edit,Bash(git:*),Bash(gh:*)"
+          # landed no artifacts): Write/Edit = create the deliverable files, the git
+          # subcommands = branch/commit/push, the gh subcommands = open PR + comment.
+          # Named subcommands only (#32 P1-1): a bare Bash(git:*) also allowed
+          # `git -c alias.x='!cmd' x`, i.e. any shell; a bare Bash(gh:*) allowed `gh api`.
+          # #36 SEC-A3: a `:*` prefix rule still accepts any later option, so every git
+          # command that can run a program or write a file through an option is pinned
+          # to an exact form (no `:*`): push (--receive-pack/--exec), diff/log/show
+          # (--output, --ext-diff). fetch/pull (--upload-pack) are not allowed at all;
+          # the checkout step already fetched what the job needs. Write/Edit may not
+          # touch .git/ (core.fsmonitor, hooks), and are scoped to the workspace (./**):
+          # git also reads ~/.gitconfig and ~/.config/git/config, which could plant the
+          # same program outside .git/ (#36 round 4). Not ~/** itself: the runner workspace
+          # lives under /home/runner. tests/test_workflow_allowlist.py
+          # fails the build if any of this regresses.
+          claude_args: >-
+            --allowedTools "Read,Glob,Grep,Write(./**),Edit(./**),Bash(git status),Bash(git diff),Bash(git diff --staged),Bash(git log --oneline -20),Bash(git rev-parse:*),Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git add:*),Bash(git commit:*),Bash(git push -u origin HEAD),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*)"
+            --disallowedTools "Edit(.git/**),Write(.git/**),Edit(**/.git/**),Write(**/.git/**),Edit(~/.gitconfig),Write(~/.gitconfig),Edit(~/.config/**),Write(~/.config/**)"
