@@ -34,6 +34,11 @@ jobs:
             echo "::error::tag $TAG does not match SKILL.md metadata.version $declared"; exit 1
           fi
           grep -q "^## \[$version\]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no [$version] section"; exit 1; }
+      - name: Tag must point at a commit on main
+        run: |
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD || {
+            echo "::error::tag commit $GITHUB_SHA is not on main; release tags go on a merged commit (LOOP.md)"; exit 1; }
       - name: Release gate (same checks as PR CI)
         run: |
           python -m pip install --require-hashes -r requirements-dev.txt

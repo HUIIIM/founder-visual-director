@@ -111,7 +111,7 @@ def validate_entry(entry, idx):
         return [tag + " 不是对象"]
     lid = entry.get("ledger_id")
     if isinstance(lid, str) and lid:
-        tag = "条目 " + lid
+        tag = "条目 " + re.sub(r"\s+", " ", str(lid)).strip()  # 单行化：ledger_id 伪造不了报告行（#32 P2-8）
     problems = []
     for field in REQUIRED_FIELDS:
         value = entry.get(field)

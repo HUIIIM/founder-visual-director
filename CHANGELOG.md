@@ -9,6 +9,12 @@ Versions follow git tags from v1.1.0 on (releases carry an SBOM, Sigstore signat
 ### Added
 - README 增加真实运行截图 `docs/assets/demo-run.svg`（DOC-5）：由 `scripts/render_demo_screenshot.py` 取 `demo/run.py` 与 `demo/eval.sh` 的实际输出生成，CI 以 `--check` 比对，图与实际运行不一致即失败；无台账时样例如实显示为「条件通过」（退出码 5）。 / README shows a real demo run, regenerated from actual command output.
 
+### Fixed
+- 面部一致性校验在空台账或全部条目已退役时不再报「通过」，改为「无法判定」（退出码 2）（#23 第 1 项）。 / Face check on an empty or all-retired ledger is "cannot judge", not a pass.
+- 轮换报告里调用方提供的值单行化并加「」，伪造不了「- 结论：」行；`demo/run.py` 只认最后一条「- 结论：」行（#23 第 2 项）。 / Candidate text can no longer forge the rotation verdict line.
+- 品牌锁补查 `color-mix()` / `device-cmyk()` / `light-dark()` 与 hue 单位 turn / rad / grad 的 `hsl()`（#23 第 4 项）。 / Remaining brand-lock colour bypasses closed.
+- 发布流程先核对标签所在提交在 `main` 上，否则不发布（#23 第 6 项）。 / Release refuses a tag whose commit is not on main.
+
 ## [1.1.0] - 2026-10-30
 
 ### Added (publishing)

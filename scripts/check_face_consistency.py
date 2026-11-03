@@ -17,7 +17,7 @@
 若存在则按同一方式校验产物文件存在性与哈希；不存在时仅提示「未启用」。
 授权/版本面（model_id 停用等）不在本脚本范围，登记字段校验由 ledger_lib 承担。
 
-退出码：0 通过 / 1 违规 / 2 台账不可读或无对象条目（降级，无法判定）/ 3 内部错误。
+退出码：0 通过 / 1 违规 / 2 台账不可读或无可核验条目（空台账、全部已退役、无对象条目：降级，无法判定）/ 3 内部错误。
 用法：python3 scripts/check_face_consistency.py <台账.md|.json> [--all]
 （默认只查 已发布/待发 条目；--all 连同已退役条目一并查。）
 """
@@ -114,8 +114,9 @@ def main(argv=None):
     all_violations, all_notes = [], []
     if non_objects:
         all_notes.append(f"台账有 {non_objects} 个条目不是 JSON 对象，未参与核验")
-    if entries and not targets and non_objects == len(entries):
-        print(f"面部一致性校验：无法判定（降级）—— 台账 {args.ledger} 没有任何对象条目")
+    if not targets:
+        why = "没有任何对象条目" if entries and non_objects == len(entries) else "没有在用（已发布/待发）条目可核验"
+        print(f"面部一致性校验：无法判定（降级）—— 台账 {args.ledger} {why}；空集不能判为通过")
         return 2
     for p in problems:
         all_notes.append(f"台账字段缺陷（ledger_lib）：{p}")
