@@ -51,6 +51,17 @@ class ClaudeWorkflowAllowlist(unittest.TestCase):
         for rule in ("Edit(.git/**)", "Write(.git/**)"):
             self.assertIn(rule, self.denied)
 
+    def test_file_tools_scoped_to_workspace(self):
+        # #36 round 4: git reads ~/.gitconfig and ~/.config/git/config too (core.fsmonitor,
+        # core.pager, alias.*), so an unscoped Write/Edit could plant a program outside .git/.
+        for tool in ("Write", "Edit", "MultiEdit", "NotebookEdit"):
+            self.assertNotIn(tool, self.allowed, f"bare {tool} is unscoped")
+        for rule in self.allowed:
+            if re.match(r"^(Write|Edit|MultiEdit|NotebookEdit)\(", rule):
+                self.assertRegex(rule, r"^\w+\(\./\*\*\)$", rule)
+        for rule in ("Edit(~/.gitconfig)", "Write(~/.gitconfig)", "Edit(~/.config/**)", "Write(~/.config/**)"):
+            self.assertIn(rule, self.denied)
+
 
 if __name__ == "__main__":
     unittest.main()

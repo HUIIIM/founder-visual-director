@@ -23,6 +23,8 @@ on:
     types: [submitted]
 
 # One run per issue/PR at a time; a second @claude waits instead of racing the first.
+# GitHub keeps one running and ONE pending run per group: a third @claude while one is
+# pending replaces (cancels) the pending one. Re-mention after the run finishes.
 concurrency:
   group: claude-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
   cancel-in-progress: false
@@ -76,8 +78,11 @@ jobs:
           # to an exact form (no `:*`): push (--receive-pack/--exec), diff/log/show
           # (--output, --ext-diff). fetch/pull (--upload-pack) are not allowed at all;
           # the checkout step already fetched what the job needs. Write/Edit may not
-          # touch .git/ (core.fsmonitor, hooks). tests/test_workflow_allowlist.py
+          # touch .git/ (core.fsmonitor, hooks), and are scoped to the workspace (./**):
+          # git also reads ~/.gitconfig and ~/.config/git/config, which could plant the
+          # same program outside .git/ (#36 round 4). Not ~/** itself: the runner workspace
+          # lives under /home/runner. tests/test_workflow_allowlist.py
           # fails the build if any of this regresses.
           claude_args: >-
-            --allowedTools "Read,Glob,Grep,Write,Edit,Bash(git status),Bash(git diff),Bash(git diff --staged),Bash(git log --oneline -20),Bash(git rev-parse:*),Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git add:*),Bash(git commit:*),Bash(git push -u origin HEAD),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*)"
-            --disallowedTools "Edit(.git/**),Write(.git/**),Edit(**/.git/**),Write(**/.git/**)"
+            --allowedTools "Read,Glob,Grep,Write(./**),Edit(./**),Bash(git status),Bash(git diff),Bash(git diff --staged),Bash(git log --oneline -20),Bash(git rev-parse:*),Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git add:*),Bash(git commit:*),Bash(git push -u origin HEAD),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*)"
+            --disallowedTools "Edit(.git/**),Write(.git/**),Edit(**/.git/**),Write(**/.git/**),Edit(~/.gitconfig),Write(~/.gitconfig),Edit(~/.config/**),Write(~/.config/**)"
