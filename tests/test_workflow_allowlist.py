@@ -10,6 +10,8 @@ import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORKFLOW = os.path.join(ROOT, ".github", "workflows", "claude.yml")
+# claude-code-action v1.0.266, tag-mode tool additions reviewed in #36 round 5 and #40.
+REVIEWED_ACTION_SHA = "d535f5172dec02b204866b393d6b20b9b2aaf98d"
 
 
 def _tool_list(flag):
@@ -61,6 +63,40 @@ class ClaudeWorkflowAllowlist(unittest.TestCase):
                 self.assertRegex(rule, r"^\w+\(\./\*\*\)$", rule)
         for rule in ("Edit(~/.gitconfig)", "Write(~/.gitconfig)", "Edit(~/.config/**)", "Write(~/.config/**)"):
             self.assertIn(rule, self.denied)
+
+    def test_read_scoped_and_secret_paths_denied(self):
+        # #40: tag mode adds a bare Read, so the denies carry the protection on their own.
+        self.assertNotIn("Read", self.allowed)
+        for rule in ("Read(//proc/**)", "Read(~/.claude/**)", "Bash(gh * --body-file*)", "Bash(gh * -F*)"):
+            self.assertIn(rule, self.denied)
+
+    def test_git_commit_cannot_read_a_file_or_run_a_command(self):
+        # #47 round 7: commit message from a file (-F/--file/-t) or from $(…)/backticks, then
+        # the allowed push, is the same read-a-secret-and-publish chain as gh --body-file.
+        for rule in (
+            "Bash(git commit -F*)", "Bash(git commit * -F*)",
+            "Bash(git commit --file*)", "Bash(git commit * --file*)",
+            "Bash(git commit -t*)", "Bash(git commit * -t*)",
+            "Bash(git commit --template*)", "Bash(git commit * --template*)",
+            "Bash(*$(*)", "Bash(*`*)",
+        ):
+            self.assertIn(rule, self.denied)
+
+    def test_turn_cap(self):
+        # #44 item 2 (SOTA ARCH-4): the agent loop has a hard step bound.
+        with open(WORKFLOW, encoding="utf-8") as f:
+            m = re.search(r"--max-turns (\d+)", f.read())
+        self.assertIsNotNone(m, "claude_args has no --max-turns")
+        self.assertLessEqual(int(m.group(1)), 60)
+
+    def test_action_pin_reviewed(self):
+        # #40 item 2: claude-code-action adds its own tools in tag mode (v1.0.266: Read, LS,
+        # Glob, Grep, git add/commit/rm, its git-push.sh, MCP tools). This test only sees
+        # claude_args, so a new action SHA must fail here until someone re-reads
+        # src/modes/tag/index.ts and confirms the added tools reopen nothing, then updates it.
+        with open(WORKFLOW, encoding="utf-8") as f:
+            pins = re.findall(r"anthropics/claude-code-action@([0-9a-f]{40})", f.read())
+        self.assertEqual(pins, [REVIEWED_ACTION_SHA])
 
 
 if __name__ == "__main__":
