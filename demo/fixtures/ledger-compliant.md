@@ -7,6 +7,7 @@
 [
   {
     "ledger_id": "xhs-2026-009",
+    "image_sha256": "3376117605df0bdac7b3aa8c97c411d6724bdd03afd6223ce7eff90143daf4cb",
     "platform": "小红书",
     "post_no": "第 9 篇",
     "date_made": "2026-10-24",
@@ -30,6 +31,7 @@
   },
   {
     "ledger_id": "xhs-2026-007",
+    "image_sha256": "b50fdda85d8d45a39e4cdc342aeb6fd783d27a79ea7298cda9826380735b4f56",
     "platform": "小红书",
     "post_no": "第 7 篇",
     "date_made": "2026-10-05",
@@ -53,6 +55,7 @@
   },
   {
     "ledger_id": "xhs-2026-003",
+    "image_sha256": "0468054498c39937b358f96b12520e0d7fb9fbe7c04c439bb77ffc949e4dcc2c",
     "platform": "小红书",
     "post_no": "第 3 篇",
     "date_made": "2026-09-18",

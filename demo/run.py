@@ -21,13 +21,34 @@ import json
 import os
 import re
 import sys
+import unicodedata
 from datetime import date as _date
 
 DEMO = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(DEMO)
 STANDARDS = os.path.join(SKILL, "references", "prompt-standards.md")
-WHITE_PORTRAIT_WORDS = ["标准照", "标准头像", "standard portrait", "standard avatar"]
-WHITE_STUDIO_WORDS = ["白底", "棚拍", "white background"]
+WHITE_PORTRAIT_WORDS = ["标准照", "标准头像", "standard portrait", "standard avatar"]  # 硬拦（与 v0.1 相同）
+REVIEW_PORTRAIT_WORDS = ["证件照", "id photo", "passport photo"]  # 第二档：转人工复核
+# 白底场景词：中文 + 英文对译（#42：white backdrop / white seamless 原先漏判）
+PORTRAIT_WORDS = ["portrait", "headshot", "头像", "半身照", "肖像"]
+# 只有真正的白底词才把「人像」判成白底标准照；棚拍本身不等于白底（暗调棚拍是品牌美术方向，#46 第 6 轮）
+# 白底「背景」只认明确的背景写法（正向匹配，#46 第 8 轮）：「白墙」作子串会命中「黑白墙绘」
+# 「白墙画廊」，`white wall` 会命中 off-white wall；所以墙只在「…前 / 背景」「against a white wall」
+# 这类把它当背景的写法里算数，拉丁词在连字符归一化之前判边界。
+WHITE_BG_PATTERNS = [
+    r"白底",
+    r"(纯)?白色?背景",
+    r"纯白墙",
+    r"白墙(前|背景|面前)",
+    r"(?<![\w-])white[\s-]+(background|backdrop|seamless)\b",
+    r"\b(against|on|in front of) an? (plain )?white wall\b",
+    r"\bplain white studio\b",
+]
+WHITE_BG_WORDS = ["白底", "白色背景", "white background", "white backdrop", "white seamless"]
+# 构图术语里的 portrait 不是「人像」（#46 第 7 轮：portrait orientation 是竖构图）
+NOT_PORTRAIT = ["portrait orientation", "portrait mode", "portrait format", "portrait aspect"]
+WHITE_STUDIO_WORDS = WHITE_BG_WORDS + ["棚拍"]  # 只用于推断 scene_category（与 main 一致）
+ZERO_WIDTH = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff\u00ad"))
 OUT = os.environ.get("FVD_DEMO_OUT") or os.path.join(DEMO, "output")
 os.makedirs(OUT, exist_ok=True)
 
@@ -73,18 +94,89 @@ def load_rules():
                           [t.strip() for t in right.split("|") if t.strip()]))
     b_triggers = [t.strip() for chunk in appendix.get("b_level_triggers", [])
                   for t in chunk.split(",") if t.strip()]
+
+    def words(name):
+        return [t.strip() for chunk in appendix.get(name, []) for t in chunk.split(",") if t.strip()]
+
+    # 第二档：只转人工复核、不硬拦的 v0.2 补充词条（#46，见附表说明）
+    review = {
+        "banned": words("review_banned"),
+        "face_words": words("review_face_words"),
+        "age_patterns": appendix.get("review_age_patterns", []),
+        "b_triggers": words("review_b_level_triggers"),
+    }
+    global REVIEW_RULES
+    REVIEW_RULES = review
     return phrases, negative, banned, face_words, age_patterns, pairs, b_triggers
 
 
+REVIEW_RULES = {}
+
+
+def normalize_text(text):
+    """去零宽字符与软连字符，再 NFKC（全角 → 半角）。不处理跨文字形近字（如西里尔 с）。"""
+    return unicodedata.normalize("NFKC", text.translate(ZERO_WIDTH))
+
+
+def _latin_pattern(tok):
+    """拉丁词条的匹配式：词边界，词间允许任意空白或连字符（`cinematic lighting` 命中
+    `Cinematic-lighting`）。词形变化不做通配，由附表逐条列出（#46 第 6 轮：通配后缀让
+    `grin` 命中叙事调性 `grind`）。"""
+    words = [w for w in re.split(r"[\s-]+", tok) if w]
+    return r"\b" + r"[\s-]+".join(re.escape(w) for w in words) + r"\b"
+
+
+def _word_in(word, text):
+    """中文词按子串；拉丁词按词边界（#46 第 7 轮：`id photo` 曾命中 `vivid photo`）。"""
+    if re.search(r"[^\x00-\xff]", word):
+        return word in text
+    return re.search(r"\b" + re.escape(word) + r"\b", text) is not None
+
+
 def hits_in(text, tokens):
-    """词表命中：拉丁词按词边界（不分大小写），中文按子串。"""
+    """词表命中：拉丁词按词边界（不分大小写，空白/连字符等价），中文按子串。
+
+    原文与归一化文本**任一**命中即算（#46 第 11 轮）：归一化会删掉夹在两个词之间的零宽字符、
+    把 ™ 折成 TM，从而吃掉 v0.1 依赖的词边界；只比归一化文本会让硬拦比 main 松。
+    """
+    variants = (text, normalize_text(text))
     out = []
     for tok in tokens:
         if re.search(r"[^\x00-\xff]", tok):
-            if tok in text:
+            if any(tok in v for v in variants):
                 out.append(tok)
-        elif re.search(r"\b" + re.escape(tok) + r"\b", text, re.IGNORECASE):
+        elif any(re.search(_latin_pattern(tok), v, re.IGNORECASE) for v in variants):
             out.append(tok)
+    return out
+
+
+def pattern_hits(patterns, text):
+    """正则词条：原文与归一化文本任一命中即算（同 hits_in）。"""
+    variants = (text, normalize_text(text))
+    return [p for p in patterns if any(re.search(p, v, re.IGNORECASE) for v in variants)]
+
+
+CHECKLIST_SOURCES = [
+    # (小节标题, references 文件, 条目正则, 应有条数)
+    ("脸角度三规则", "face-angle-rules.md", r"^## 规则 \d+：(.+)$", 3),
+    ("人体比例十项", "proportion-qc.md", r"^\| \d+ \| ([^|]+?) \|", 10),
+    ("真实感（解剖/物理/全局观感）十一项", "photorealism-checklist.md", r"^\d+\. \*\*(.+?)\*\*", 11),
+    ("背景专项五项", "background-physics.md", r"^## \d+\. (.+)$", 5),
+]
+
+
+def load_checklist_items():
+    """从 references 逐项读取 QA 条目；条数与规范不符返回 None（按规则读取失败处理）。"""
+    out = []
+    for title, name, pattern, expected in CHECKLIST_SOURCES:
+        try:
+            with open(os.path.join(SKILL, "references", name), encoding="utf-8") as f:
+                items = [m.group(1).strip() for m in re.finditer(pattern, f.read(), re.MULTILINE)]
+        except OSError:
+            return None
+        if len(items) != expected:
+            return None
+        out.append((title, name, items))
     return out
 
 
@@ -114,6 +206,10 @@ def main():
     phrases, negative, banned, face_words, age_patterns, pairs, b_triggers = load_rules()
     if not (phrases and negative and banned and face_words and age_patterns and pairs and b_triggers):
         print("规则读取失败：references/prompt-standards.md 规则集不完整，拒绝放行")
+        return 4
+
+    if load_checklist_items() is None:
+        print("规则读取失败：references 中的 QA 检查条目（3 + 10 + 11 + 5）不完整，拒绝放行")
         return 4
 
     sys.path.insert(0, os.path.join(SKILL, "scripts"))
@@ -154,7 +250,7 @@ def main():
     for ph in phrases:
         masked = masked.replace(ph, " ")
     face_hits = hits_in(masked, face_words)
-    age_hits = [p for p in age_patterns if re.search(p, masked, re.IGNORECASE)]
+    age_hits = pattern_hits(age_patterns, masked)
     # 检查三：冲突审计（互斥对，真判定：同对两边同时出现即冲突）
     conflicts = []
     scan_all = positive + " " + scene
@@ -165,7 +261,32 @@ def main():
     # 检查四：B 级严审（真实可识别人物场景不在本 skill 内放行，SKILL.md Step 2-1）
     b_hits = hits_in(scene + " " + theme, b_triggers)
     # 检查五：白底标准照永不作内容配图（白底三禁 1，事故级；不依赖台账）
-    white_hits = [w for w in WHITE_PORTRAIT_WORDS if w in scene.lower()]
+    scene_l = re.sub(r"[\s-]+", " ", normalize_text(scene).lower())
+    # 硬拦白底词保持 v0.1 的子串语义（#46 第 10 轮：加词边界后 standard portraits 复数漏判），
+    # 只在其上叠加归一化，不收窄
+    white_hits = [w for w in WHITE_PORTRAIT_WORDS if w in scene.lower() or w in scene_l]
+    # 白底 + 人像/头像 = 标准照的另一种写法（#42：「studio portrait on white backdrop」原先放行）
+    scene_raw = re.sub(r"\s+", " ", normalize_text(scene).lower())  # 保留连字符：off-white 不是 white
+    white_scene = [m.group(0) for p in WHITE_BG_PATTERNS for m in [re.search(p, scene_raw)] if m]
+    scene_np = scene_l
+    for phrase in NOT_PORTRAIT:
+        scene_np = scene_np.replace(phrase, " ")
+    portrait = [w for w in PORTRAIT_WORDS if _word_in(w, scene_np)]
+    review_white = [w for w in REVIEW_PORTRAIT_WORDS if _word_in(w, scene_l)]
+    if white_scene and portrait:
+        review_white.append(f"{white_scene[0]} + {portrait[0]}")
+    # 第二档（v0.2 补充词条）：命中只转人工复核，终判上限条件通过（#46）
+    rv = REVIEW_RULES
+    review = []
+    for label, hits in (
+        ("疑似禁用词", hits_in(positive, rv.get("banned", []))),
+        ("疑似面部描述", hits_in(masked, rv.get("face_words", []))),
+        ("疑似年龄描述", pattern_hits(rv.get("age_patterns", []), masked)),
+        ("疑似 B 级情形（真实可识别人物）", hits_in(scene + " " + theme, rv.get("b_triggers", []))),
+        ("疑似白底标准照", review_white),
+    ):
+        if hits:
+            review.append(label + "：" + ",".join(hits))
     if inp.get("uses_standard_portrait") is True:
         white_hits.append("uses_standard_portrait")
 
@@ -191,12 +312,15 @@ def main():
         "styling": inp.get("styling"),
         "asset_id": inp.get("asset_id"),
         "asset_grade": inp.get("asset_grade"),
+        "image_sha256": inp.get("image_sha256"),
         "uses_standard_portrait": inp.get("uses_standard_portrait", False),
+        "model_id": inp.get("model_id"),
+        "model_consent_status": inp.get("model_consent_status"),
     }
     # 场景文字本身写明白底标准照/白底棚拍时，不靠调用者另设标志才拦（白底三禁）
     if white_hits:
         candidate["uses_standard_portrait"] = True
-    if not candidate["scene_category"] and any(w in scene for w in WHITE_STUDIO_WORDS):
+    if not candidate["scene_category"] and any(w in scene_l for w in WHITE_STUDIO_WORDS):
         candidate["scene_category"] = "白底棚拍"
     rot_code, rot_report = check_rotation.run(ledger, candidate)
     # 仓内台账路径按相对路径展示：样例输出不带本机绝对路径，可在任何机器上复现
@@ -214,11 +338,15 @@ def main():
     if rot_code == 1:
         reasons.append("轮换违规（见 rotation.md 违规明细；prompt 待场景确认，不可投产）")
     rejected = bool(reasons)
-    conditional = not rejected and rot_code != 0
+    conditional = not rejected and (rot_code != 0 or bool(review))
     if rejected:
         verdict = "打回（" + "；".join(reasons) + "）"
     elif conditional:
-        verdict = f"条件通过（轮换预检：{rot_verdict}；须补台账或人工复核后才可发布，不得当作通过）"
+        if not review:
+            verdict = f"条件通过（轮换预检：{rot_verdict}；须补台账或人工复核后才可发布，不得当作通过）"
+        else:
+            rot_part = f"；轮换预检：{rot_verdict}" if rot_code != 0 else ""
+            verdict = f"条件通过（人工复核：{'；'.join(review)}{rot_part}；须人工复核后才可发布，不得当作通过）"
     else:
         verdict = "通过"
 
@@ -263,32 +391,21 @@ def main():
     with open(os.path.join(OUT, "prompt.txt"), "w", encoding="utf-8") as f:
         f.write(prompt)
 
-    # 输出二：QA 检查表骨架（skill 真实四段结构）
-    checklist = """# QA 检查表（demo 骨架）
-
-## 脸角度三规则
-- [ ] 角度预设已二选一写死（无中间态）
-- [ ] 无死亡角度/透视畸变
-- [ ] 眼神方向与叙事一致
-
-## 人体比例十项
-- [ ] 手部结构正常（demo 级：待全尺寸复核）
-- [ ] 肩颈/四肢比例自然
-- [ ] 其余八项：待全尺寸目检
-
-## 真实感（解剖/物理/全局观感）
-- [ ] 光影方向一致
-- [ ] 材质边缘无 AI 塑料感
-
-## 背景专项
-- [ ] 背景无乱入文字/畸形路人
-- [ ] 背景虚化层次自然
-
-## 发布前
-- [ ] 替代文本（alt text）已写：描述画面内容，含封面文字原文
-
-> 任一红线 fail 即整单打回。demo 级全部标"待全尺寸复核"。
-"""
+    # 输出二：QA 检查表（逐项取自 references，单一来源；#42 / evals.json #7：3 + 10 + 11 + 5 项）
+    sections = load_checklist_items()
+    lines = ["# QA 检查表（demo 级：逐项待全尺寸目检）", ""]
+    for title, _src, items in sections:
+        lines.append(f"## {title}")
+        lines += [f"- [ ] {i}. {item} —— 待全尺寸复核" for i, item in enumerate(items, 1)]
+        lines.append("")
+    lines += [
+        "## 发布前",
+        "- [ ] 替代文本（alt text）已写：描述画面内容，含封面文字原文",
+        "",
+        "> 每项判 pass / fail / 待全尺寸复核。任一红线 fail 即整单打回。demo 级全部标「待全尺寸复核」。",
+        "",
+    ]
+    checklist = "\n".join(lines)
     with open(os.path.join(OUT, "checklist.md"), "w", encoding="utf-8") as f:
         f.write(checklist)
 

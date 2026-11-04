@@ -10,6 +10,7 @@
 [
   {
     "ledger_id": "xhs-2026-010",
+    "image_sha256": "99aab63a1abc26ece365e1c36773d34570c559e2a511bb05146d01be748928b8",
     "platform": "小红书",
     "post_no": "第 10 篇",
     "date_made": "2026-10-25",
@@ -28,6 +29,7 @@
   },
   {
     "ledger_id": "xhs-2026-009b",
+    "image_sha256": "2e30c7a4202433df8f2cab035058cf00c469d609c0d1524752d72a5d7386e3fc",
     "platform": "小红书",
     "post_no": "第 9 篇·补",
     "date_made": "2026-10-24",
@@ -46,6 +48,7 @@
   },
   {
     "ledger_id": "xhs-2026-008",
+    "image_sha256": "293c7d29058e2657cf155020199cf70a4a46d22783ce09830bdb9af4339acf69",
     "platform": "小红书",
     "post_no": "第 8 篇",
     "date_made": "2026-10-23",
@@ -64,6 +67,7 @@
   },
   {
     "ledger_id": "xhs-2026-006",
+    "image_sha256": "ad75473c84e8439e43ef053ebcf112c416822106ae215fb6e1fdb49c8bd62a25",
     "platform": "小红书",
     "post_no": "第 6 篇",
     "date_made": "2026-10-20",
@@ -82,6 +86,7 @@
   },
   {
     "ledger_id": "xhs-2026-004",
+    "image_sha256": "0bff85d4bc1fc089c6dc73b91f613083663ac67f0d1542d441513443b9d86518",
     "platform": "小红书",
     "post_no": "第 4 篇",
     "date_made": "2026-10-10",

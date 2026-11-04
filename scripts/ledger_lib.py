@@ -15,6 +15,7 @@
 import json
 import os
 import re
+import unicodedata
 from datetime import date
 
 GRADES = ("S", "A", "B")
@@ -131,6 +132,15 @@ def validate_entry(entry, idx):
         problems.append(f"{tag} 的 asset_grade 非法：{grade!r}（应为 S/A/B）")
     if entry.get("platform") is not None and normalize_platform(entry.get("platform")) is None:
         problems.append("{} 的 platform 非法：{!r}（应为 {}）".format(tag, entry.get("platform"), " / ".join(PLATFORMS)))
+    for field, pattern, hint in ID_FIELDS:
+        bad = id_problem(field, entry.get(field), pattern, hint)
+        if bad:
+            problems.append(f"{tag} 的 " + bad)
+    mid = entry.get("model_id")
+    if mid is not None and not (isinstance(mid, str) and MODEL_ID_RE.match(normalize_model_id(mid) or "")):
+        # A malformed id (zero-width space, full-width hyphen, underscore) would silently never
+        # match the candidate, so a revocation recorded on it would be ignored (IVV round 5).
+        problems.append(f"{tag} 的 model_id 非法：{mid!r}（只能含字母、数字和连字符，如 miao-v1；无则填 none）")
     consent = entry.get("model_consent_status")
     if consent is not None and consent not in MODEL_CONSENT_STATUSES:
         problems.append(f"{tag} 的 model_consent_status 非法：{consent!r}")
@@ -153,6 +163,75 @@ def validate_entry(entry, idx):
                 elif ref["role"] not in ROLES:
                     problems.append(f"{tag} 的 references[{j}] 角色非法：{ref['role']!r}")
     return problems
+
+
+MODEL_ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+
+
+def normalize_model_id(value):
+    """Canonical form for comparing model_id values: stripped, lower-case; non-strings → None.
+
+    Candidate and ledger are compared in this form, so "Miao-v1" or "miao-v1 " cannot slip
+    past a ledger entry that revoked "miao-v1" (#37 residual).
+    """
+    if not isinstance(value, str):
+        return None
+    return value.strip().lower() or None
+
+
+ZERO_WIDTH = dict.fromkeys(map(ord, "\u200b\u200c\u200d\u2060\ufeff\u00ad"))
+ASSET_ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+def normalize_key(value):
+    """Canonical form for comparing ledger identifiers and labels (#41).
+
+    Zero-width characters and soft hyphens are dropped, NFKC folds full-width forms
+    (「＋」→「+」, 「ｘｈｓ」→「xhs」), whitespace runs collapse to one space, and case is
+    folded; outfit separators (+ 、 / & ,) become "+" with no spaces around them.
+    "XHS-ASSET-009", "xhs-asset-009 " and "ｘｈｓ－ａｓｓｅｔ－００９" are one key.
+    Non-strings and empty strings → None.
+    """
+    if not isinstance(value, str):
+        return None
+    text = unicodedata.normalize("NFKC", value.translate(ZERO_WIDTH))
+    # 搭配分隔符统一成「+」并去掉两侧空白：「外套 + 衬衫」「外套、衬衫」「外套/衬衫」是同一套（#49 第 1 轮 P2）
+    text = re.sub(r"\s*[+、/&,]\s*", "+", text)
+    return re.sub(r"\s+", " ", text).strip().casefold() or None
+
+
+def normalize_asset_id(value):
+    """asset_id in comparison form; see normalize_key."""
+    return normalize_key(value)
+
+
+def normalize_sha256(value):
+    """image_sha256 in comparison form: normalize_key, then drop one leading "sha256:" label.
+
+    Tools commonly write digests as "sha256:<hex>" (OCI, docker inspect); the label is not
+    part of the hash (#49 round 3). Returns None for non-strings and empty values.
+    """
+    key = normalize_key(value)
+    if key and key.startswith("sha256:"):
+        key = key[len("sha256:"):].strip() or None
+    return key
+
+
+def id_problem(field, value, pattern, hint):
+    """Return a defect text when a present identifier fails its format after normalisation."""
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    norm = normalize_sha256(value) if pattern is SHA256_RE else normalize_key(value)
+    if norm is None or not pattern.match(norm):
+        return f"{field} 非法：{value!r}（{hint}）"
+    return None
+
+
+ID_FIELDS = (
+    ("asset_id", ASSET_ID_RE, "只能含字母、数字和连字符，如 xhs-asset-009"),
+    ("image_sha256", SHA256_RE, "64 位十六进制 SHA-256"),
+)
 
 
 def validate_candidate(candidate):
@@ -179,4 +258,14 @@ def validate_candidate(candidate):
     consent = candidate.get("model_consent_status")
     if consent is not None and consent not in MODEL_CONSENT_STATUSES:
         problems.append(f"候选 model_consent_status 非法：{consent!r}")
+    if candidate.get("model_id") is not None and not isinstance(candidate.get("model_id"), str):
+        problems.append("候选 model_id 必须是字符串（不用模特资产时填 none）")
+    elif isinstance(candidate.get("model_id"), str) and candidate["model_id"].strip() and not MODEL_ID_RE.match(
+        normalize_model_id(candidate["model_id"])
+    ):
+        problems.append("候选 model_id 只能含小写字母、数字和连字符（如 miao-v1；不用模特资产时填 none）")
+    for field, pattern, hint in ID_FIELDS:
+        bad = id_problem(field, candidate.get(field), pattern, hint)
+        if bad:
+            problems.append("候选 " + bad)
     return problems

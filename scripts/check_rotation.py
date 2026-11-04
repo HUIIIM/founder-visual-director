@@ -148,7 +148,7 @@ def evaluate(entries, candidate, rules, defect_count=0):
         if gaps:
             unknown.append(f"条目 {','.join(gaps)} 缺{label}")
         for d, e in dated[:3]:
-            if e.get(field) == candidate.get(field):
+            if ledger_lib.normalize_key(e.get(field)) == ledger_lib.normalize_key(candidate.get(field)):
                 hit.append(f"相邻 3 篇内{label}重复：{e.get(field)}（{e.get('ledger_id')}，{d.isoformat()}）")
     findings.extend(hit)
     checks.append(_check_line("相邻 3 篇", hit, unknown))
@@ -166,7 +166,7 @@ def evaluate(entries, candidate, rules, defect_count=0):
             unknown.append(f"14 天内条目 {','.join(gaps)} 缺场景大类")
         for d, e in dated:
             delta = abs((cand_date - d).days)
-            if e.get("scene_category") == cat and delta < 14:
+            if ledger_lib.normalize_key(e.get("scene_category")) == ledger_lib.normalize_key(cat) and delta < 14:
                 hit.append(f"同场景大类 {cat} 距 {e.get('ledger_id')} 仅 {delta} 天（{d.isoformat()}）")
     findings.extend(hit)
     checks.append(_check_line("14 天同大类", hit, unknown))
@@ -177,11 +177,13 @@ def evaluate(entries, candidate, rules, defect_count=0):
     if not asset:
         unknown.append("候选缺 asset_id")
     else:
-        gaps = missing_in(dated, "asset_id")
+        # 冷却期不分平台（rotation-rules.md「同一 ID 在冷却期内不得重复使用」；#41：换平台复用曾绕过）
+        dated_all = sorted(((d, e) for d, p, e in usable_any), key=lambda t: t[0], reverse=True)
+        gaps = missing_in(dated_all, "asset_id")
         if gaps:
             unknown.append(f"条目 {','.join(gaps)} 缺 asset_id")
-        for d, e in dated:
-            if e.get("asset_id") == asset:
+        for d, e in dated_all:
+            if ledger_lib.normalize_asset_id(e.get("asset_id")) == ledger_lib.normalize_asset_id(asset):
                 need = cooldowns.get(e.get("asset_grade"))
                 if need is None:
                     unknown.append(f"条目 {e.get('ledger_id')} 等级缺失或非法，冷却天数无从确定")
@@ -229,13 +231,93 @@ def evaluate(entries, candidate, rules, defect_count=0):
     findings.extend(hit)
     checks.append(_check_line("白底三禁", hit, unknown))
 
-    # 检查 6：模特资产授权（docs/PRIVACY.md：授权过期或用途变更即停用）
-    hit = []
+    # 检查 6：模特资产授权（docs/PRIVACY.md：授权过期或用途变更即停用）。
+    # 候选给出 model_id 时，查全台账（不分平台、状态）里同一 model_id 的授权登记：
+    # 任一条记为 expired / revoked 即违规；候选与台账都没有授权状态 = 无法判定（#32 P2-5）。
+    hit, unknown = [], []
     consent = candidate.get("model_consent_status")
+    model_id = ledger_lib.normalize_model_id(candidate.get("model_id"))
     if consent in ("expired", "revoked"):
         hit.append(f"模特资产授权状态为 {consent}，不得用于新内容")
+    if not model_id:
+        unknown.append("候选缺 model_id（不用模特资产时填 none）")
+    elif model_id == "none":
+        # "none" is the candidate's own claim; the ledger may know better (#37 residual).
+        asset = ledger_lib.normalize_asset_id(candidate.get("asset_id"))
+        modeled = [
+            e
+            for e in entries
+            if isinstance(e, dict)
+            and asset
+            and ledger_lib.normalize_asset_id(e.get("asset_id")) == asset
+            and ledger_lib.normalize_model_id(e.get("model_id")) not in (None, "none")
+        ]
+        if modeled:
+            unknown.append(
+                f"候选填 model_id none，但台账里同一 asset_id {_shown(asset)} 登记过模特 "
+                f"{_shown(modeled[0].get('model_id'))}（条目 {_shown(modeled[0].get('ledger_id'))}）"
+            )
+    else:
+        same_model = [
+            e for e in entries if isinstance(e, dict) and ledger_lib.normalize_model_id(e.get("model_id")) == model_id
+        ]
+        for e in same_model:
+            if e.get("model_consent_status") in ("expired", "revoked"):
+                hit.append(
+                    f"台账登记 model_id {_shown(model_id)} 授权为 {e.get('model_consent_status')}"
+                    f"（条目 {_shown(e.get('ledger_id'))}），不得用于新内容"
+                )
+        recorded = consent or any(e.get("model_consent_status") for e in same_model)
+        if not recorded and not hit:
+            unknown.append(f"model_id {_shown(model_id)} 在候选与台账中都没有授权状态")
+    # 台账里任一条目的 model_id / 授权状态本身不合法，就无法确认它记的不是这个模特的撤销：
+    # 本行判「无法判定」，不印「通过」（#37 第 6 轮）。
+    if not hit:
+        for e in entries:
+            if not isinstance(e, dict):
+                continue
+            mid, cst = e.get("model_id"), e.get("model_consent_status")
+            bad_id = mid is not None and not (
+                isinstance(mid, str) and ledger_lib.MODEL_ID_RE.match(ledger_lib.normalize_model_id(mid) or "")
+            )
+            bad_status = cst is not None and cst not in ledger_lib.MODEL_CONSENT_STATUSES
+            if bad_id or bad_status:
+                unknown.append(f"台账条目 {_shown(e.get('ledger_id'))} 的 model_id 或授权状态不合法，无法确认其授权记录")
+                break
     findings.extend(hit)
-    checks.append(_check_line("模特资产授权", hit, []))
+    checks.append(_check_line("模特资产授权", hit, unknown))
+
+    # 检查 7：已发布图永久退役（SKILL.md § 红线：凡已发布用过的图永久退役，含跨平台复用）。
+    # 判定对象是产物图本身（image_sha256，ledger-format.md「一图一记录」字段），不是可在冷却期后
+    # 复用的素材 asset_id：任一已发布/已退役条目登记了同一哈希即违规，不分平台、不看日期（#41）。
+    hit, unknown = [], []
+    digest = ledger_lib.normalize_sha256(candidate.get("image_sha256"))
+    if not digest:
+        unknown.append("候选缺 image_sha256，已发布图是否被复用无法机判（须人工确认）")
+    elif not ledger_lib.SHA256_RE.match(digest):
+        # 已知非法的键拿去比对只能空比：本行判「无法判定」，不印「通过」（#49 第 2 轮 P2）
+        unknown.append("候选 image_sha256 格式非法，已发布图是否被复用无法机判")
+    else:
+        unhashed = []
+        for e in entries:
+            if not isinstance(e, dict) or e.get("status") not in ("已发布", "已退役"):
+                continue
+            if not ledger_lib.SHA256_RE.match(ledger_lib.normalize_sha256(e.get("image_sha256")) or ""):
+                unhashed.append(e.get("ledger_id") or "?")  # 缺失或格式非法：都看不见这张图
+                continue
+            if ledger_lib.normalize_sha256(e.get("image_sha256")) == digest:
+                hit.append(
+                    f"该图已发布过（条目 {_shown(e.get('ledger_id'))}，{_shown(e.get('platform'))}），"
+                    "已发布图永久退役，不得二次使用"
+                )
+        # 已发布条目没登记哈希就看不到这张图：不能报「通过」（#49 第 1 轮：空比对 = 无法判定）
+        if unhashed and not hit:
+            shown = ",".join(_shown(i) for i in unhashed[:5]) + ("…" if len(unhashed) > 5 else "")
+            unknown.append(
+                f"{len(unhashed)} 条已发布/已退役条目缺 image_sha256 或格式非法（{shown}），这些图是否被复用无法机判"
+            )
+    findings.extend(hit)
+    checks.append(_check_line("已发布图永久退役", hit, unknown))
 
     if findings:
         verdict = "违规"

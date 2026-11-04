@@ -6,7 +6,7 @@ Xiaohongshu, Instagram and LinkedIn.
 
 | | |
 |---|---|
-| Status | active · early — v1.1.0 prepared (CHANGELOG cut 2026-10-30); once the `v1.1.0` tag is pushed on the release merge commit (nothing pushes it automatically yet; see issues #30 and #31), the release workflow builds the signed GitHub Release (SBOM, Sigstore signatures, build provenance), see [Releases](https://github.com/HUIIIM/founder-visual-director/releases) and [docs/RELEASING.md](docs/RELEASING.md); first release 1.0.0 on 2026-10-06; the runnable demo stops at prompt level (no image rendering); `evals/` holds one smoke run and a 7-case eval set |
+| Status | active · early — v1.1.0 released 2026-11-03 (tag on `0c8e6da`; signed GitHub Release with SBOM, Sigstore signatures and build provenance, see [Releases](https://github.com/HUIIIM/founder-visual-director/releases) and [docs/RELEASING.md](docs/RELEASING.md)); first release 1.0.0 on 2026-10-06; the runnable demo stops at prompt level (no image rendering); `evals/` holds one smoke run and a 7-case eval set |
 | Type | vertciti skill (agent skill defined in [SKILL.md](SKILL.md)) |
 | Install / use | Load `SKILL.md` as a skill in your agent; try the zero-dependency demo with `python3 demo/run.py` |
 | Licence | MIT ([LICENSE](LICENSE)), Copyright (c) 2026 Jiahui Miao |

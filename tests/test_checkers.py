@@ -33,6 +33,7 @@ def entry(ledger_id, date, **kw):
         "model_id": "miao-v1", "status": "已发布", "ai_generated": True,
         "ai_disclosure_text": "本图由 AI 生成", "ai_disclosure_method": "platform_declaration",
         "ai_disclosure_basis": "标识办法",
+        "image_sha256": hashlib.sha256(f"image-{ledger_id}".encode()).hexdigest(),
     }
     base.update(kw)
     return base
@@ -41,7 +42,8 @@ def entry(ledger_id, date, **kw):
 def candidate(**kw):
     base = {"platform": "小红书", "date": "2026-10-26", "scene_category": "户外运动", "outfit": "new-outfit",
             "styling": "new-styling", "asset_id": "asset-new", "asset_grade": "A",
-            "uses_standard_portrait": False}
+            "uses_standard_portrait": False, "model_id": "miao-v1", "model_consent_status": "active",
+            "image_sha256": "f57d196a115ea44f2531b38d8c758498ffb15edba2735d3630215859a4f7ae76"}
     base.update(kw)
     return base
 
@@ -277,6 +279,60 @@ class Issue23Leftovers(unittest.TestCase):
             wf = f.read()
         self.assertIn("git merge-base --is-ancestor", wf)
         self.assertLess(wf.index("git merge-base --is-ancestor"), wf.index("gh release create"))
+
+    def test_release_notes_for_1_1_0_list_every_shipped_fix(self):
+        # #43 / #53 round 2: run release.yml's own notes extraction on the real CHANGELOG.
+        with open(os.path.join(ROOT, ".github", "workflows", "release.yml"), encoding="utf-8") as f:
+            wf = f.read()
+        extract = next(ln.strip() for ln in wf.splitlines() if ln.strip().startswith('awk -v v="$version"'))
+        extract = extract.replace("> release-notes.md", "").strip()
+        notes = subprocess.run(
+            ["bash", "-eo", "pipefail", "-c", "version=1.1.0; " + extract],
+            cwd=ROOT, capture_output=True, text=True, check=True,
+        ).stdout
+        self.assertIn("### Fixed", notes)
+        for marker in ("#23 第 1 项", "#23 第 2 项", "#23 第 4 项", "#23 第 6 项", "#32 P2-8", "#16 P1-1", "#24", "#28"):
+            self.assertIn(marker, notes, marker)
+        entries = [ln for ln in notes.splitlines() if ln.startswith("- ")]
+        self.assertEqual(len(entries), len(set(entries)), "duplicate entries in [1.1.0]")
+
+    def test_release_refuses_pending_unreleased_entries(self):
+        # #43 / #53 P2-1: run the gate's exact shell line from release.yml against fixtures.
+        with open(os.path.join(ROOT, ".github", "workflows", "release.yml"), encoding="utf-8") as f:
+            wf = f.read()
+        self.assertLess(wf.index("[Unreleased] still lists"), wf.index("gh release create"))
+        gate = next(ln.strip() for ln in wf.splitlines() if ln.strip().startswith('pending="$(awk'))
+        head = "# Changelog\n\n"
+        tail = "\n## [1.1.0] - 2026-11-03\n\n### Fixed\n- shipped\n"
+        cases = {
+            "## [Unreleased]\n": 0,
+            "## [Unreleased]\n\n### Fixed\n\n": 0,
+            "": 0,
+            "## [Unreleased]\n\n### Fixed\n- one\n": 1,
+            "## [Unreleased]\n\n* star entry\n+ plus entry\n": 2,
+            "## [Unreleased]\n\n  - indented\n1. numbered\n-noSpace\n": 3,
+            "## [Unreleased]\n\nA prose paragraph.\n": 1,
+            "## [unreleased]\n- lower case\n": 1,
+            "## Unreleased\n- no brackets\n": 1,
+            "## [Unreleased]\r\n- crlf\r\n": 1,
+            # Round 2 (#53): heading spellings and a second section.
+            "##[Unreleased]\n- no space\n": 1,
+            "### [Unreleased]\n- level three\n": 1,
+            "# Unreleased\n- level one\n": 1,
+            " ## [Unreleased]\n- leading space\n": 1,
+            "## \uff3bUnreleased\uff3d\n- fullwidth\n": 1,
+            "## [Unreleased]\n\n## [9.9.9]\n- old\n\n## [Unreleased]\n- second section\n": 1,
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            for body, want in cases.items():
+                with self.subTest(body=body):
+                    with open(os.path.join(tmp, "CHANGELOG.md"), "w", encoding="utf-8", newline="") as f:
+                        f.write(head + body + tail)
+                    out = subprocess.run(
+                        ["bash", "-eo", "pipefail", "-c", gate + '; echo "$pending"'],
+                        cwd=tmp, capture_output=True, text=True, check=True,
+                    ).stdout.strip()
+                    self.assertEqual(int(out), want, body)
 
 
 if __name__ == "__main__":
