@@ -6,6 +6,9 @@ Versions follow git tags from v1.1.0 on (releases carry an SBOM, Sigstore signat
 
 ## [Unreleased]
 
+### Added
+- README 增加真实运行截图 `docs/assets/demo-run.svg`（DOC-5）：由 `scripts/render_demo_screenshot.py` 取 `demo/run.py` 与 `demo/eval.sh` 的实际输出生成，CI 以 `--check` 比对，图与实际运行不一致即失败；无台账时样例如实显示为「条件通过」（退出码 5）。 / README shows a real demo run, regenerated from actual command output.
+
 ### Changed
 - 发布流程：标签所在提交的 CHANGELOG `[Unreleased]` 仍有条目时拒绝发布（#43），避免发布说明漏列已随包发出的变更。 / Release refuses a tag whose CHANGELOG still lists [Unreleased] entries.
 - 机读规则附表升至 v0.2，改为两档判定（#42、#46）：不带前缀的小节与 v0.1 逐字相同、命中即打回；`review_` 小节收 v0.2 补的中英对译、词形变化与改写（英文 B 级触发 famous / actor / gala / dinner party、文字与中文数字年龄、中年、眼神 / 目光 / 嘴角 / 笑、电影感 / 电影质感 / 电影级、红毯 / 宴会、证件照与「白底背景 + 人像」等），命中只转人工复核（终判上限条件通过，注明「人工复核：疑似…」），不硬拦。匹配前去零宽字符并 NFKC，拉丁词条词间空白与连字符等价。测试：8 条硬拦探针（含 standard portraits 复数）、硬拦档「不比 main 松」的逐词变体测试、38 条转人工探针、25 条正常场景（独立评估第 6–9 轮的全部误报）、54 条真实场景语料（硬拦必须为 0，转人工率上限 30%，实测 26%）。 / Rule table v0.2 has two tiers: v0.1 rules hard-reject; the v0.2 rewordings flag for manual review, so new coverage cannot hard-reject normal scenes.
