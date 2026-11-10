@@ -76,7 +76,7 @@ jobs:
       # it keeps the git CLI because API commits in agent mode target the dispatch branch.
       - name: Run Claude Code (workflow_dispatch, maintainer prompt)
         if: github.event_name == 'workflow_dispatch'
-        uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1
+        uses: anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # #51 round 2: keep the action's token out of .git/config. With this input empty,
@@ -132,7 +132,7 @@ jobs:
 
       - name: Run Claude Code (comment / issue events, API commits)
         if: github.event_name != 'workflow_dispatch'
-        uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1
+        uses: anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe # v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # #51 round 2: credential helper instead of a token in .git/config (see above).
