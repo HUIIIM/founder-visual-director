@@ -67,7 +67,7 @@ jobs:
           python scripts/make_sbom.py "$version" "dist/founder-visual-director-$version.cdx.json"
           (cd dist && sha256sum -- * > SHA256SUMS)
           awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {f=1; next} f && /^## / {exit} f' CHANGELOG.md > release-notes.md
-      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2 (cosign v3.0.6)
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.2 (cosign v3.0.6)
       - name: Sign artifacts (keyless, Sigstore bundle per file)
         run: |
           cd dist
