@@ -75,7 +75,7 @@
 
 ## 待中枢裁的事项
 
-本轮按下列默认做法执行，裁决请求已写成仓内 issue：
+本轮按下列默认做法执行，裁决请求已写成仓内 issue：第一行见 [#63](https://github.com/HUIIIM/founder-visual-director/issues/63)，其余见 [#64](https://github.com/HUIIIM/founder-visual-director/issues/64)。
 
 | 事项 | 本轮默认 | 为什么需要裁 |
 |---|---|---|
@@ -90,7 +90,7 @@
 
 - **下游**：中枢（裁决上表）→ 大师雕刻师轮（以 A/B 稿与 R1 为输入重画终稿）→ 实刻与压蜡验收。
 - **上游**：《家格设计 DNA 规格》v1.0+v1.1（定版规格）、Control Loop 2026-11-12 简报。
-- **闭环缺口**：撞纹检索无人认领；实刻验证无人认领。两项都已写进 issue，不留在这里等。
+- **闭环缺口**：撞纹检索无人认领；实刻验证无人认领。两项都已写进 [#65](https://github.com/HUIIIM/founder-visual-director/issues/65)，不留在这里等。
 
 ## 重新生成
 
