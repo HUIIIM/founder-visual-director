@@ -1,0 +1,3 @@
+# family-crest/ is design-study material, not part of the skill. Keep it out of
+# `git archive` (the release tarball built by .github/workflows/release.yml).
+family-crest export-ignore
