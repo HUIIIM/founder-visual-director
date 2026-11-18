@@ -14,12 +14,15 @@ if [ "$INPUT" != "$DEMO/input.json" ]; then
 fi
 OUTDIR="${FVD_DEMO_OUT:-$DEMO/output}"
 
-# 样例可复现（默认模式，须在下面重写 demo/output 之前比对）：提交的样例必须与重新生成结果逐字一致
+# 样例可复现（默认模式，须在下面重写 demo/output 之前比对）：仓内提交的样例必须与重新生成结果逐字一致。
+# 样例集以仓内实际提交为准：prompt.txt 是 run.py 的生成物，已按呈现卫生标准下架、不再入仓，
+# 其内容由下方逐项校验对当场重新生成的结果验证，不在此比对。
 REPRO_FAIL=""
 if [ -z "$TMPD" ]; then
   RX="$(mktemp -d)"
   FVD_DEMO_OUT="$RX" python3 "$DEMO/run.py" "$INPUT" > /dev/null 2>&1
   for f in prompt.txt checklist.md rotation.md; do
+    [ -f "$DEMO/output/$f" ] || continue
     cmp -s "$DEMO/output/$f" "$RX/$f" || REPRO_FAIL="$REPRO_FAIL $f"
   done
   rm -rf "$RX"
