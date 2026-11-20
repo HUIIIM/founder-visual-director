@@ -23,5 +23,7 @@ jobs:
       - run: pip install --require-hashes -r requirements-dev.txt
       - run: ruff check demo scripts
       - run: bash demo/eval.sh
+      - name: README screenshot still matches a real run
+        run: python3 scripts/render_demo_screenshot.py --check
       - name: committed sample unchanged after eval
         run: git diff --exit-code demo/output
